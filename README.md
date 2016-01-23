@@ -29,3 +29,10 @@ These are entered in Terminal using the keyboard
 - 1 *LEFT_WHEEL_MOTOR*
 - 2 *RIGHT_WHEEL_MOTOR*
 - 3 *KICKER_MOTOR*
+
+# Engine IDs
+
+Back single wheel #1
+Front left wheel #4
+Front right wheel #5
+Kicker #3
