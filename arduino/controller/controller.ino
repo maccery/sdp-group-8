@@ -343,9 +343,7 @@ void move_bot(int16_t lm, int16_t rm, int16_t sm) {
   if (READY == 0) return;
   uint16_t lag = motors.get_max_lag(movement_motors, 4);
 
-const float magic = 0.85;
-
-  motors.run_motor(LEFT_MOTOR, lm > 0? magic : -magic, abs(lm), motors.get_adj_lag(LEFT_MOTOR, lag));
+  motors.run_motor(LEFT_MOTOR, lm > 0? 1 : -1, abs(lm), motors.get_adj_lag(LEFT_MOTOR, lag));
   motors.run_motor(RIGHT_MOTOR, rm > 0? 1 : -1, abs(rm), motors.get_adj_lag(RIGHT_MOTOR, lag));
   motors.run_motor(SINGLE_MOTOR, sm > 0? 1 : -1, abs(sm), motors.get_adj_lag(SINGLE_MOTOR, lag));
 }
