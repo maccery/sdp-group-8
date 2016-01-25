@@ -198,7 +198,7 @@ class Controller(Arduino):
         Fills cmd with *params converted to byte-length fields.
         :param params: a list of parameters of form (value, struct.pack format).
         """
-        
+
         bytes = []
         for param in params:
             try:
@@ -240,7 +240,7 @@ class Controller(Arduino):
 
         return 0.4
 
-    def move(self, x=None, y=None, direction=None, power=1):
+    def move(self, x=None, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
@@ -332,7 +332,7 @@ class Controller(Arduino):
         self._write(cmd)
         return duration * 0.001 + 0.07
 
-    def run_engine(self, id, power, duration):
+    def run_motor(self, id, power, duration):
         """
         Runs a specific motor  at a certain power for a certain duration
 
