@@ -4,7 +4,7 @@
 #define KICK_POWER 1
 #define GRAB_POWER -1
 // determines durations at max power
-#define KICK_DURATION 190
+#define KICK_DURATION 100
 #define GRAB_DURATION 280
 
 #define DEBUG
@@ -26,7 +26,7 @@ long LAST_MATCH_ID = -1;
 MotorBoard motors;
 
 enum MOTORS {
-  SINGLE_MOTOR = 1,
+  SINGLE_MOTOR = 2,
   LEFT_MOTOR = 4, 
   RIGHT_MOTOR = 5,
   
@@ -36,7 +36,7 @@ enum MOTORS {
   MAX_ENGINES = 6
 };
 
-uint8_t movement_motors[] = {SINGLE_MOTOR, LEFT_MOTOR, RIGHT_MOTOR};
+uint8_t movement_motors[] = {LEFT_MOTOR, RIGHT_MOTOR};
 
 // 0 -> not kicking, 1 -> kicking, 2 -> getting back to position
 byte IS_KICKING = 0;
@@ -205,14 +205,15 @@ void setup() {
   Serial.begin(115200);  // 115kb
   setup_pins();
   Wire.begin();  // need this s.t. arduino is mastah
-  Serial.println("Team2READY");
+  Serial.println("Team8-D READY");
   Serial.flush();
   motors.stop_all();
 }
 
 void kick_f(float power) {
   IS_KICKING = HAPPENING;
-  motors.run_motor(KICKER, power, uint16_t(float(KICK_DURATION) / abs(power)), 0);
+  motors.run_motor(KICKER, 0.2, uint16_t(float(50)), 0);
+  motors.run_motor(KICKER, power, uint16_t(float(KICK_DURATION) / abs(power)*2), 0);
 }
 
 void loop() {
@@ -297,7 +298,7 @@ void move_left(uint8_t a, uint8_t b) {
 void turn(uint8_t a, uint8_t b) {
   if (READY == 0) return;
   int16_t d = reint(a, b);
-  return move_bot(-d, d, d);
+  return move_bot(-d, d, -d);
 }
 
 void stop_engines() {
