@@ -32,7 +32,8 @@ def send_msg(s, msg, timeout, retries, ack):
         end_time = time.time()
         while end_time - start_time < timeout:
             r = s.readline()
-            log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r, timeout - time.time() + start_time))
+            log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r,
+                                                                                           timeout - time.time() + start_time))
             buff += r
             if r:
                 print 'Got msg "{0}" from upstream'.format(r)
@@ -88,7 +89,7 @@ class MockSerial(object):
 def msg_sender(pipe, avail, port, rate, timeout, retries):
     # establish serial connection
     s = serial.Serial(port, rate, timeout=timeout)
-    #s = MockSerial(port, rate, timeout=timeout)
+    # s = MockSerial(port, rate, timeout=timeout)
     print 'Established connection, commencing initial wait for handshakes(5s)'
     time.sleep(5)
     print 'Connection should be up now, testing with ready'
@@ -107,7 +108,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
                 ready_waiter(s, avail, timeout, retries=10)
                 if avail.value == 1:
                     avail.value = 0
-                    time.sleep(1.0/10.0)
+                    time.sleep(1.0 / 10.0)
                     avail.value = 1
             continue
         if 'TERMINATE' in msg:
@@ -149,7 +150,7 @@ class Arduino(object):
     def establish_connection(self):
         pipe_in, pipe_out = Pipe()
         self.serial_thread = Process(target=msg_sender, args=(
-        pipe_out, self.available, self.port, self.rate, self.timeout, self.ack_tries))
+            pipe_out, self.available, self.port, self.rate, self.timeout, self.ack_tries))
         self.serial_thread.start()
         atexit.register(self.destr)
         self.pipe = pipe_in
@@ -176,9 +177,12 @@ class Arduino(object):
 def scale_list(scale, l):
     return map(lambda a: scale * a, l)
 
-    
+
 LAST_MSG = 0
 
+
+# This function takes the commands from the command line and converts them to
+# commands for the Ardunio
 class Controller(Arduino):
     """ Implements an interface for Arduino device. """
 
@@ -222,6 +226,7 @@ class Controller(Arduino):
             bytes += r
             # print r
             # print struct.unpack('<h', ''.join(r))
+
         def xor_bytes(a, b):
             b = struct.unpack('B', b)[0]
             return a ^ b
@@ -248,14 +253,18 @@ class Controller(Arduino):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
+
         :param x: distance to move in x axis (+x is towards robot's shooting direction)
         :param y: distance to move in y axis (+y is 90' ccw from robot's shooting direction)
         :param power: deprecated
         :return: duration it will be blocked
         """
+
         print "attempting move ({0}, {1})".format(x, y)
+
         x = None if -0.01 < x < 0.01 else x
         y = None if -0.01 < y < 0.01 else y
+
         print "clamp move ({0}, {1})".format(x, y)
 
         if power is not None:
@@ -279,10 +288,15 @@ class Controller(Arduino):
             print "Calculated duration {duration}ms for distance {distance:.2f}".format(duration=duration,
                                                                                         distance=distance)
             return 0
+
+        # If we're given a command on the x axis, we need to move forwards
         if x:
             cmd = self.COMMANDS['move_straight']
+
+        # Otherwise we need to move in the left
         else:
             cmd = self.COMMANDS['move_left']
+
         cmd = self.get_command(cmd, (duration, 'h'))  # short
         self._write(cmd)
         return duration * 0.001 + 0.07
@@ -330,33 +344,5 @@ class Controller(Arduino):
         cmd = self.COMMANDS['run_engine']
         cmd = self.get_command(cmd, (id, 'B'), (power, 'b'), (duration, 'h'))
         self._write(cmd)
+
         return float(duration) / 1000.0
-
-    def grab(self, power=None):
-        """ power is negative atm """
-        if power is None:
-            power = 1.0
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_close']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
-
-    def open_grabber(self, power=None):
-        """ power is negative atm """
-        if power is None:
-            power = 1.0
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_open']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
-
-    def close_grabber(self, power=None):
-        if power is None:
-            power = self.MAX_POWER
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_close']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
