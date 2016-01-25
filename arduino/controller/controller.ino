@@ -277,6 +277,7 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   case 'O': grab_open(b1);  READY = 0;return;
   case 'C': grab_close(b1);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
+  case 'B': receive_binary(); READY = 0; return;
   default: READY = 1; MATCHED_CMD = 0;
   }
 }
@@ -285,6 +286,12 @@ int16_t reint(uint8_t a, uint8_t b) {
   uint8_t tmp[] = {a, b};
   return *(int16_t*)(&tmp);
 }
+
+// Given the binary sent, print it
+void receive_binary() {
+    Serial.println("binary received");
+}
+
 void move_front(uint8_t a, uint8_t b) {
   if (READY == 0) return;
   int16_t d = reint(a, b);
