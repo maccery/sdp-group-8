@@ -2,10 +2,8 @@
 #include <Wire.h>
 // determines the direction of "outwards" movement
 #define KICK_POWER 1
-#define GRAB_POWER -1
 // determines durations at max power
 #define KICK_DURATION 100
-#define GRAB_DURATION 280
 
 #define DEBUG
 #define ACK_COMMS
@@ -29,12 +27,11 @@ MotorBoard motors;
 
 enum MOTORS {
   SINGLE_MOTOR = 2,
-  LEFT_MOTOR = 4, 
+  LEFT_MOTOR = 4,
   RIGHT_MOTOR = 5,
-  
-  KICKER = 3, 
-  GRABBER = 0, // not used
-  
+
+  KICKER = 3,
+
   MAX_ENGINES = 6
 };
 
@@ -42,8 +39,6 @@ uint8_t movement_motors[] = {LEFT_MOTOR, RIGHT_MOTOR};
 
 // 0 -> not kicking, 1 -> kicking, 2 -> getting back to position
 byte IS_KICKING = 0;
-// 0 -> closed, 1 -> opening, 2 -> opened, 3 -> closing
-byte IS_GRABBER_OPEN = 0;
 
 byte MATCHED=0;
 byte KICK_AFTERWARDS = 0;
@@ -97,7 +92,7 @@ void read_serial() {
     }
     buffer[buff_head] = 0;
     if (buff_head >= BUFF_SIZE) buff_head = 0;
-    if (MATCHED_CMD != 0) 
+    if (MATCHED_CMD != 0)
       for(int i = 0; Serial.available() > 0 && i < 1024; i++)
         Serial.read();
     MATCHED_CMD = 0;
@@ -222,7 +217,7 @@ void kick_f(float power) {
 void loop() {
   // check whether something needs to be stopped
   motors.scan_motors();
-  
+
   // if kicking -> check whether we need to start retracting the kicker, etc
   switch(IS_KICKING) {
   case HAPPENING:
@@ -241,28 +236,7 @@ void loop() {
   default:
     break; // do nothing
   }
-  switch(IS_GRABBER_OPEN) {
-  case HAPPENING:
-    if (!motors.is_running(GRABBER)) {
-      IS_GRABBER_OPEN = COMPLETE;
-      motors.stop_motor(GRABBER);
-    }
-    break;
-  case CLOSING:
-    if (!motors.is_running(GRABBER)) {
-      IS_GRABBER_OPEN = 0;
-      motors.stop_motor(GRABBER);
-    }
-    break;
-  case COMPLETE:
-    if (KICK_AFTERWARDS == 1) {
-      kick_f(KICK_POWER);
-      KICK_AFTERWARDS = 0;
-    }
-    break;
-  default:
-    break;
-  }
+
   if (READY == 0 && motors.all_stopped())
     READY = 1;
   read_serial();
@@ -277,8 +251,6 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   case 'F': move_front(b1, b2);  READY = 0;return;
   case 'L': move_left(b1, b2);  READY = 0;return;
   case 'T': turn(b1, b2);  READY = 0;return;
-  case 'O': grab_open(b1);  READY = 0;return;
-  case 'C': grab_close(b1);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
   case 'B': receive_binary(b1); READY = 0; return;
   default: READY = 1; MATCHED_CMD = 0;
@@ -296,8 +268,8 @@ void receive_binary(uint8_t b1) {
   Serial.print("binary received ");
   Serial.print(b1);
   Serial.println();
-  
-  // Outputs the byte through I2C to a checker  
+
+  // Outputs the byte through I2C to a checker
   Wire.beginTransmission(BinaryCheckerI2CAddress);
   Wire.write(&b1, 1);
   Wire.endTransmission();
@@ -326,19 +298,13 @@ void stop_engines() {
   motors.stop_motor(SINGLE_MOTOR);
 }
 
-/* KICK [POWER(0;1]=1] */
+/*
+The power provided by the python interface is multiplied by the KICK_POWER function
+*/
 void kick(uint8_t pwr) {
-  MATCHED=1;
-  if (IS_GRABBER_OPEN == COMPLETE) {
-    
+    MATCHED=1;
     float power = float(pwr) / 255.0;
-    
     kick_f(power * KICK_POWER);
-  }
-  else {
-    grab_open(255);
-    KICK_AFTERWARDS = 1;
-  }
 }
 
 // OPEN GRABBER
@@ -371,5 +337,3 @@ void run_engine(uint8_t id, int8_t pwr, uint16_t time) {
   float power = float(pwr) / 127.0;
   motors.run_motor(id, power, time, -1);
 }
-
-
