@@ -276,17 +276,25 @@ void receive_binary(uint8_t b1) {
 }
 
 void move_front(uint8_t a, uint8_t b) {
+  // We will only move forward if the robot is in the 'ready' state
   if (READY == 0) return;
+
   int16_t d = reint(a, b);
   return move_bot(d, d, 0);
 }
+
 void move_left(uint8_t a, uint8_t b) {
+  // We will only turn if the robot is in the 'ready' state
   if (READY == 0) return;
+
   int16_t d = reint(a, b);
   return move_bot(-d, d, d);
 }
+
 void turn(uint8_t a, uint8_t b) {
+  // We will only turn if the robot is in the 'ready' state
   if (READY == 0) return;
+
   int16_t d = reint(a, b);
   return move_bot(-d, d, -d);
 }
@@ -305,23 +313,6 @@ void kick(uint8_t pwr) {
     MATCHED=1;
     float power = float(pwr) / 255.0;
     kick_f(power * KICK_POWER);
-}
-
-// OPEN GRABBER
-void grab_open(uint8_t pwr) {
-  float power = float(pwr) / 255.0;
-  if (IS_GRABBER_OPEN != 0)
-    return;
-  IS_GRABBER_OPEN = HAPPENING;
-  motors.run_motor(GRABBER, power * GRAB_POWER, uint16_t(float(GRAB_DURATION) / power), 0);
-}
-// close grab
-void grab_close(uint8_t pwr) {
-  float power = float(pwr) / 255.0;
-  if (IS_GRABBER_OPEN != COMPLETE)
-    return;
-  IS_GRABBER_OPEN = CLOSING;
-  motors.run_motor(GRABBER, -power * GRAB_POWER, uint16_t(float(GRAB_DURATION) / power), 0);
 }
 
 void move_bot(int16_t lm, int16_t rm, int16_t sm) {

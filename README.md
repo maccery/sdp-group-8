@@ -27,7 +27,7 @@ The controller object is now held in ``ct``, and you can issue commands as norma
 An example use of ``move()`` is as follows:
 
 ```
-ct.move(x=200)
+ct.move_distance(x=200)
 ```
 
 This will move the robot "forward" by 200 units. **These are arbitrary units** (you can see how these units equate to distance using [this spreadsheet](https://docs.google.com/spreadsheets/d/1Wiwqk3x_8VJf5Og2c1d-C5w0c_pkGMPa_0722nI-RGs/edit). Setting ``x=-100`` would move the robot "backwards" by 100 units. The ``x`` refers to the x-axis, so forward and backwards on 1-dimensional plane. 
@@ -39,19 +39,19 @@ This will move the robot "forward" by 200 units. **These are arbitrary units** (
 `x` is given in ms.
 
 ```
-ct.go(200)
+ct.move_duration(200)
 ```
 
 ## Run specific motor 
 ```
-ct.run_engine(id, power, duration)
+ct.run_motor(id, power, duration)
 ```
 
 ## Turn at a certain angle
 Note `angle` is given in radians. However this function is not properly implemented yet.
 
 ```
-ct.turn(angle)
+ct.turn_clockwise(angle)
 ```
 
 ## Kick the ball at a certain power
