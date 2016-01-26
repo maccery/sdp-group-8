@@ -210,8 +210,9 @@ void setup() {
 
 void kick_f(float power) {
   IS_KICKING = HAPPENING;
-  motors.run_motor(KICKER, 0.2, uint16_t(float(50)), 0);
-  motors.run_motor(KICKER, power, uint16_t(float(KICK_DURATION) / abs(power)*2), 0);
+
+  // Runs the motor at the given motor, the for KICK_DURATION lenght of time
+  motors.run_motor(KICKER, power, uint16_t(float(KICK_DURATION)), 0);
 }
 
 void loop() {

@@ -372,7 +372,7 @@ class Controller(Arduino):
             cmd = self.get_command(cmd, (ord(byte), 'B'))
             self._write(cmd)
             time.sleep(1. / frequency)
-            byte = file.read(1)
+
         finally:
             file.close()
 	
