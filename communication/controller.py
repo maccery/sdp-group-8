@@ -11,17 +11,16 @@ import numpy as np
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
 LOG_FILE = None
 
-
 def log_write(msg, flush=False):
     msg_format = "[{time:.3f}] {msg}\n"
     msg = msg.replace('\r', '\\r').replace('\n', '\\n')
     LOG_FILE.write(msg_format.format(time=time.time(), msg=msg))
     LOG_FILE.flush()
 
-
 def send_msg(s, msg, timeout, retries, ack):
     global LOG_FILE
     if not LOG_FILE:
+        # Make a new log file for this attempt
         LOG_FILE = open("msg_log_{0}.log".format(int(time.time())), 'w+')
     buff = ''
     for i in range(retries):
@@ -52,7 +51,6 @@ def send_msg(s, msg, timeout, retries, ack):
         log_write("no msg was ack'd, giving up")
         return False
 
-
 def ready_waiter(s, avail, timeout, retries=None):
     if avail.value == 1:
         return True
@@ -65,7 +63,6 @@ def ready_waiter(s, avail, timeout, retries=None):
     print 'Arduino not ready :/'
     avail.value = 0
     return False
-
 
 class MockSerial(object):
     def __init__(self, *args, **kwargs):
@@ -88,7 +85,7 @@ class MockSerial(object):
 def msg_sender(pipe, avail, port, rate, timeout, retries):
     # establish serial connection
     s = serial.Serial(port, rate, timeout=timeout)
-    #s = MockSerial(port, rate, timeout=timeout)
+    # s = MockSerial(port, rate, timeout=timeout)
     print 'Established connection, commencing initial wait for handshakes(5s)'
     time.sleep(5)
     print 'Connection should be up now, testing with ready'
@@ -98,6 +95,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
         time.sleep(10)
         if not ready_waiter(s, avail, timeout):
             raise Exception("Arduino down for good")
+
     # we should be fine now
     while True:
         t, msg = pipe.recv()
@@ -107,9 +105,10 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
                 ready_waiter(s, avail, timeout, retries=10)
                 if avail.value == 1:
                     avail.value = 0
-                    time.sleep(1.0/10.0)
+                    time.sleep(1.0 / 10.0)
                     avail.value = 1
             continue
+
         if 'TERMINATE' in msg:
             print 'exitting...'
             return
@@ -129,10 +128,8 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             print 'msg properly sent to arduino'
             continue
 
-
 class Arduino(object):
     """ Basic class for Arduino communications. """
-
     def __init__(self, port='/dev/ttyUSB0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
                  ack_tries=4):
         self.port = port
@@ -149,7 +146,7 @@ class Arduino(object):
     def establish_connection(self):
         pipe_in, pipe_out = Pipe()
         self.serial_thread = Process(target=msg_sender, args=(
-        pipe_out, self.available, self.port, self.rate, self.timeout, self.ack_tries))
+            pipe_out, self.available, self.port, self.rate, self.timeout, self.ack_tries))
         self.serial_thread.start()
         atexit.register(self.destr)
         self.pipe = pipe_in
@@ -176,9 +173,12 @@ class Arduino(object):
 def scale_list(scale, l):
     return map(lambda a: scale * a, l)
 
-    
+
 LAST_MSG = 0
 
+
+# This function takes the commands from the command line and converts them to
+# commands for the Ardunio
 class Controller(Arduino):
     """ Implements an interface for Arduino device. """
 
@@ -189,19 +189,9 @@ class Controller(Arduino):
         'move': '{ts}V{0}{1}{2}{3}{4}{5}{6}{7}{8}{te}',
         'turn': '{ts}T{0}{1}{parity}{te}',
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
-        'grab_open': '{ts}O{0}{1}{parity}{te}',
-        'grab_close': '{ts}C{0}{1}{parity}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
+        'send_binary': '{ts}B{0}0{parity}{te}'
     }
-
-    # NB not a real radius, just one that worked
-    RADIUS = 5
-    """ Radius of the robot, used to determine what distance should it cover when turning. """
-    FWD = [1, 1, 1, 1]
-    LEFT = [-1, 1, 1, -1]
-    TURN = [1, 1, -1, -1]
-    MAX_POWER = 1.
-    """ Max speed of any engine. """
 
     @staticmethod
     def get_command(cmd, *params):
@@ -209,6 +199,7 @@ class Controller(Arduino):
         Fills cmd with *params converted to byte-length fields.
         :param params: a list of parameters of form (value, struct.pack format).
         """
+
         bytes = []
         for param in params:
             try:
@@ -222,12 +213,11 @@ class Controller(Arduino):
             bytes += r
             # print r
             # print struct.unpack('<h', ''.join(r))
+
         def xor_bytes(a, b):
             b = struct.unpack('B', b)[0]
             return a ^ b
 
-        parity = reduce(xor_bytes, bytes, 0)
-        parity = chr(parity)
         global LAST_MSG
         if LAST_MSG > 128:
             LAST_MSG = 0
@@ -236,30 +226,39 @@ class Controller(Arduino):
         return cmd.format(*bytes, parity=parity, ts='\t', te='\t')
 
     def kick(self, power=None):
+        """
+        Kicks ball at a certain power
+        :param power:
+        :return: duration to block Arduino for
+        """
+
         if power is None:
             power = 1.0
         power = int(abs(power) * 255.)
         cmd = self.COMMANDS['kick']
         cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
         self._write(cmd)
+
         return 0.4
 
-    def move(self, x=None, y=None, direction=None, power=None):
+    def move(self, x=None, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
+
         :param x: distance to move in x axis (+x is towards robot's shooting direction)
         :param y: distance to move in y axis (+y is 90' ccw from robot's shooting direction)
-        :param power: deprecated
+        :param power: strength of power (between 0 and 1)
         :return: duration it will be blocked
         """
+
         print "attempting move ({0}, {1})".format(x, y)
+
         x = None if -0.01 < x < 0.01 else x
         y = None if -0.01 < y < 0.01 else y
+
         print "clamp move ({0}, {1})".format(x, y)
 
-        if power is not None:
-            print "I don't support different powers, defaulting to 1"
         try:
             assert x or y, "You need to supply some distance"
             assert not (x and y), "You can only supply distance in one axis"
@@ -268,26 +267,38 @@ class Controller(Arduino):
             return 0
 
         distance = x or y
+        # If the distance is less than 0, then we're going in a different direction and need a "negative" duration
         if distance < 0:
-            duration = -get_duration(-distance, 1)
+            duration = -get_duration(-distance, power)
         else:
-            duration = get_duration(distance, 1)
+            duration = get_duration(distance, power)
         try:
             assert -6000 < duration < 6000, 'Something looks wrong in the distance calc'
+
         except Exception as e:
             print e
             print "Calculated duration {duration}ms for distance {distance:.2f}".format(duration=duration,
                                                                                         distance=distance)
             return 0
+
+        # If we're given a command on the x axis, we need to move forwards
         if x:
             cmd = self.COMMANDS['move_straight']
+
+        # Otherwise we need to move in the left
         else:
             cmd = self.COMMANDS['move_left']
+
         cmd = self.get_command(cmd, (duration, 'h'))  # short
         self._write(cmd)
         return duration * 0.001 + 0.07
 
     def go(self, duration):
+        """
+        Moves robot for a specified duration
+        :param duration:
+        :return: Duration the arduino is to be blocked for
+        """
         cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
         self._write(cmd)
         return duration * 0.001 + 0.07
@@ -298,7 +309,11 @@ class Controller(Arduino):
         return 0.01
 
     def turn(self, angle):
-        """ Turns robot over 'angle' radians in place. """
+        """
+        Turns the robot at a specific angle
+        :param angle: given in radians
+        :return: duation the Ardunio to be blocked for
+        """
 
         angle = convert_angle(-angle)  # so it's in [-pi;pi] range
         # if angle is positive move clockwise, otw just inverse it
@@ -318,45 +333,45 @@ class Controller(Arduino):
         self._write(cmd)
         return duration * 0.001 + 0.07
 
-    def special_move(self, lf, lb, rf, rb):
-        cmd = self.COMMANDS['move']
-        cmd = self.get_command(cmd, *zip((lf, lb, rf, rb), itertools.repeat('h')))
-        self._write(cmd)
-        return max(map(abs, [lf, lb, rf, rb])) * 0.001 + 0.1  # typically motors lag for that much
+    def run_motor(self, id, power, duration):
+        """
+        Runs a specific motor  at a certain power for a certain duration
 
-    def run_engine(self, id, power, duration):
+        :param id: ID of the motor to run
+        :param power: The power (between -1.0 and 1.0)
+        :param duration: Duration to run it for
+        :return: Duration to block Arduino for
+        """
         assert (-1.0 <= power <= 1.0) and (0 <= id <= 5) and abs(duration) <= 30000
         power = int(power * 127)
         cmd = self.COMMANDS['run_engine']
         cmd = self.get_command(cmd, (id, 'B'), (power, 'b'), (duration, 'h'))
         self._write(cmd)
+
         return float(duration) / 1000.0
 
-    def grab(self, power=None):
-        """ power is negative atm """
-        if power is None:
-            power = 1.0
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_close']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
 
-    def open_grabber(self, power=None):
-        """ power is negative atm """
-        if power is None:
-            power = 1.0
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_open']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
+    def send_binary(self, binary_file, frequency):
+        """
+        Given a binary file location, sends the data to robot
 
-    def close_grabber(self, power=None):
-        if power is None:
-            power = self.MAX_POWER
-        power = int(abs(power) * 255.0)
-        cmd = self.COMMANDS['grab_close']
-        cmd = self.get_command(cmd, (power, 'B'), (0, 'B'))
-        self._write(cmd)
-        return 0.3
+        :param binary_file:
+        :return: Duration to block Ardino for
+        """
+
+        # Open and parse the binary file
+        file = open(binary_file, "rb")
+        try:
+            byte = file.read(1)
+            while byte != "":
+	        # Send the content
+	        cmd = self.COMMANDS['send_binary']
+	        cmd = self.get_command(cmd, (ord(byte), 'B'))
+	        self._write(cmd)
+		time.sleep(1. / frequency)
+                byte = file.read(1)
+        finally:
+            file.close()
+	
+        return 5000
+

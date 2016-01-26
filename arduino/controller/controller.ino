@@ -17,6 +17,8 @@
 // negative intermediate state
 #define CLOSING 3
 
+#define BinaryCheckerI2CAddress 69
+
 #define BUFF_SIZE 32
 uint8_t buffer[BUFF_SIZE] = "";
 uint8_t buff_head = 0;
@@ -85,6 +87,7 @@ void read_serial() {
       switch(buff_head) {
       case 0: buffer[buff_head++] = a; break;  // init hit
       case 1:
+      case 2:
       case 5:
       case 6:
       case 10: buffer[buff_head++] = a; parse_packet(); break; // finishing byte
@@ -103,7 +106,7 @@ void read_serial() {
 
 /*
 Packet format:
-0x00(K|F|L|T|O|C|S)BBP0x00  [6B]
+0x00(K|F|L|T|O|C|S|B)BBP0x00  [6B]
 where B is a byte, P is parity byte (xor'd Bs + 0)
 0x00VBBBBBBBB0x00 [11B]
 0x00RBBBB0x00 [7B]
@@ -277,6 +280,7 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   case 'O': grab_open(b1);  READY = 0;return;
   case 'C': grab_close(b1);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
+  case 'B': receive_binary(b1); READY = 0; return;
   default: READY = 1; MATCHED_CMD = 0;
   }
 }
@@ -285,6 +289,20 @@ int16_t reint(uint8_t a, uint8_t b) {
   uint8_t tmp[] = {a, b};
   return *(int16_t*)(&tmp);
 }
+
+// Given the binary sent, print it
+void receive_binary(uint8_t b1) {
+  // prints the received byte
+  Serial.print("binary received ");
+  Serial.print(b1);
+  Serial.println();
+  
+  // Outputs the byte through I2C to a checker  
+  Wire.beginTransmission(BinaryCheckerI2CAddress);
+  Wire.write(&b1, 1);
+  Wire.endTransmission();
+}
+
 void move_front(uint8_t a, uint8_t b) {
   if (READY == 0) return;
   int16_t d = reint(a, b);

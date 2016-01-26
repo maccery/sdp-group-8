@@ -10,17 +10,21 @@ import numpy as np
 
 distance_polynomial = np.poly1d(np.array([-0.094, 11.89, 52.6]))
 
-
 def get_duration(distance, power):
-    """ Calculates how long does a bot need to move at power to cover distance. """
+    """ Calculates how long does a bot need to move at power to cover distance.
+    :param distance: The distance the bot needs to travel
+    :param power: The power at which it's travelling at
+    :return: duration to run for
+    """
+
+    # We are assuming power is at 1, as this is what we have tested for
     assert power == 1
     if distance <= 21:
         t = distance_polynomial(distance)
     else:
-        # s = (t - 260) * 0.043 + 21
         t = (distance - 21) / 0.043 + 260
-    return int(t)
 
+    return int(t)
 
 def convert_angle(radians):
     """ Maps given angle to [-pi;pi] range. """
@@ -31,7 +35,6 @@ def convert_angle(radians):
         print '+pi', radians
         radians += pi
     return radians
-
 
 def rotate_vector(vector, angle, anchor=(0, 0)):
         """Rotate by the given angle, relative to the anchor point."""
