@@ -242,7 +242,7 @@ class Controller(Arduino):
 
         return 0.4
 
-    def move_distance(self, x=None, y=None, power=1):
+    def move_distance(self, x=None, y=None, power=0.3):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)

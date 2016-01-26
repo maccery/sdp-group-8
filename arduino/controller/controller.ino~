@@ -2,8 +2,10 @@
 #include <Wire.h>
 // determines the direction of "outwards" movement
 #define KICK_POWER 1
+#define GRAB_POWER -1
 // determines durations at max power
-#define KICK_DURATION 100
+#define KICK_DURATION 150
+#define GRAB_DURATION 280
 
 #define DEBUG
 #define ACK_COMMS
@@ -15,8 +17,6 @@
 // negative intermediate state
 #define CLOSING 3
 
-#define BinaryCheckerI2CAddress 69
-
 #define BUFF_SIZE 32
 uint8_t buffer[BUFF_SIZE] = "";
 uint8_t buff_head = 0;
@@ -27,11 +27,12 @@ MotorBoard motors;
 
 enum MOTORS {
   SINGLE_MOTOR = 2,
-  LEFT_MOTOR = 4,
+  LEFT_MOTOR = 4, 
   RIGHT_MOTOR = 5,
-
-  KICKER = 3,
-
+  
+  KICKER = 3, 
+  GRABBER = 0, // not used
+  
   MAX_ENGINES = 6
 };
 
@@ -39,6 +40,8 @@ uint8_t movement_motors[] = {LEFT_MOTOR, RIGHT_MOTOR};
 
 // 0 -> not kicking, 1 -> kicking, 2 -> getting back to position
 byte IS_KICKING = 0;
+// 0 -> closed, 1 -> opening, 2 -> opened, 3 -> closing
+byte IS_GRABBER_OPEN = 0;
 
 byte MATCHED=0;
 byte KICK_AFTERWARDS = 0;
@@ -82,7 +85,6 @@ void read_serial() {
       switch(buff_head) {
       case 0: buffer[buff_head++] = a; break;  // init hit
       case 1:
-      case 2:
       case 5:
       case 6:
       case 10: buffer[buff_head++] = a; parse_packet(); break; // finishing byte
@@ -92,7 +94,7 @@ void read_serial() {
     }
     buffer[buff_head] = 0;
     if (buff_head >= BUFF_SIZE) buff_head = 0;
-    if (MATCHED_CMD != 0)
+    if (MATCHED_CMD != 0) 
       for(int i = 0; Serial.available() > 0 && i < 1024; i++)
         Serial.read();
     MATCHED_CMD = 0;
@@ -101,7 +103,7 @@ void read_serial() {
 
 /*
 Packet format:
-0x00(K|F|L|T|O|C|S|B)BBP0x00  [6B]
+0x00(K|F|L|T|O|C|S)BBP0x00  [6B]
 where B is a byte, P is parity byte (xor'd Bs + 0)
 0x00VBBBBBBBB0x00 [11B]
 0x00RBBBB0x00 [7B]
@@ -208,29 +210,23 @@ void setup() {
   motors.stop_all();
 }
 
-void kick_f(float power, uint16_t duration) {
+void kick_f(float power) {
   IS_KICKING = HAPPENING;
-
-  // Runs the motor at the given motor, the for KICK_DURATION lenght of time
-  motors.run_motor(KICKER, power, duration, 0);
+  motors.run_motor(KICKER, 0.2, uint16_t(float(50)), 0);
+  motors.run_motor(KICKER, power, uint16_t(float(KICK_DURATION) / abs(power)*2), 0);
 }
 
 void loop() {
   // check whether something needs to be stopped
   motors.scan_motors();
-
+  
   // if kicking -> check whether we need to start retracting the kicker, etc
   switch(IS_KICKING) {
   case HAPPENING:
-    // While we're in the happening state, check when the kicker stops
     if (!motors.is_running(KICKER)) {
-      // IT should have stopped already but just verify this
-      motors.stop_motor(KICKER);  
-      
-      // Wait 30ms then bring the kicker back to its original position
-      delay(30);
-      kick_f(-0.5 * KICK_POWER, uint16_t(float(KICK_DURATION)));
-      
+      motors.stop_motor(KICKER);  // should be stopped already, but w/e
+      delay(3);
+      kick_f(-1.0 * KICK_POWER);
       IS_KICKING = COMPLETE;
     }
     break;
@@ -242,7 +238,28 @@ void loop() {
   default:
     break; // do nothing
   }
-
+  switch(IS_GRABBER_OPEN) {
+  case HAPPENING:
+    if (!motors.is_running(GRABBER)) {
+      IS_GRABBER_OPEN = COMPLETE;
+      motors.stop_motor(GRABBER);
+    }
+    break;
+  case CLOSING:
+    if (!motors.is_running(GRABBER)) {
+      IS_GRABBER_OPEN = 0;
+      motors.stop_motor(GRABBER);
+    }
+    break;
+  case COMPLETE:
+    if (KICK_AFTERWARDS == 1) {
+      kick_f(KICK_POWER);
+      KICK_AFTERWARDS = 0;
+    }
+    break;
+  default:
+    break;
+  }
   if (READY == 0 && motors.all_stopped())
     READY = 1;
   read_serial();
@@ -257,8 +274,9 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   case 'F': move_front(b1, b2);  READY = 0;return;
   case 'L': move_left(b1, b2);  READY = 0;return;
   case 'T': turn(b1, b2);  READY = 0;return;
+  case 'O': grab_open(b1);  READY = 0;return;
+  case 'C': grab_close(b1);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
-  case 'B': receive_binary(b1); READY = 0; return;
   default: READY = 1; MATCHED_CMD = 0;
   }
 }
@@ -267,41 +285,18 @@ int16_t reint(uint8_t a, uint8_t b) {
   uint8_t tmp[] = {a, b};
   return *(int16_t*)(&tmp);
 }
-
-// Given the binary sent, print it
-void receive_binary(uint8_t b1) {
-  // prints the received byte
-  Serial.print("binary received ");
-  Serial.print(b1);
-  Serial.println();
-
-  // Outputs the byte through I2C to a checker
-  Wire.beginTransmission(BinaryCheckerI2CAddress);
-  Wire.write(&b1, 1);
-  Wire.endTransmission();
-}
-
 void move_front(uint8_t a, uint8_t b) {
-  // We will only move forward if the robot is in the 'ready' state
   if (READY == 0) return;
-
   int16_t d = reint(a, b);
-  
   return move_bot(d, d, 0);
 }
-
 void move_left(uint8_t a, uint8_t b) {
-  // We will only turn if the robot is in the 'ready' state
   if (READY == 0) return;
-
   int16_t d = reint(a, b);
   return move_bot(-d, d, d);
 }
-
 void turn(uint8_t a, uint8_t b) {
-  // We will only turn if the robot is in the 'ready' state
   if (READY == 0) return;
-
   int16_t d = reint(a, b);
   return move_bot(-d, d, -d);
 }
@@ -313,24 +308,36 @@ void stop_engines() {
   motors.stop_motor(SINGLE_MOTOR);
 }
 
-/*
-The power provided by the python interface is multiplied by the KICK_POWER function
-*/
+/* KICK [POWER(0;1]=1] */
 void kick(uint8_t pwr) {
-    MATCHED=1;
+  MATCHED=1;
+  if (IS_GRABBER_OPEN == COMPLETE) {
     
-    // Firstly bring the kicker back
-    motors.run_motor(KICKER, -0.3, uint16_t(float(300)), -1);
-    //delay(310);
+    float power = float(pwr) / 255.0;
     
-    IS_KICKING = HAPPENING;
+    kick_f(power * KICK_POWER);
+  }
+  else {
+    grab_open(255);
+    KICK_AFTERWARDS = 1;
+  }
+}
 
-    // Runs the motor at the given motor, the for KICK_DURATION lenght of time
-    motors.run_motor(KICKER, float(pwr)/255.0, uint16_t(float(250)), 300);
-    
-    // Then kick forwards at the power given
-    //float power = float(pwr) / 255.0;
-    //kick_f(power * KICK_POWER, uint16_t(float(KICK_DURATION)));
+// OPEN GRABBER
+void grab_open(uint8_t pwr) {
+  float power = float(pwr) / 255.0;
+  if (IS_GRABBER_OPEN != 0)
+    return;
+  IS_GRABBER_OPEN = HAPPENING;
+  motors.run_motor(GRABBER, power * GRAB_POWER, uint16_t(float(GRAB_DURATION) / power), 0);
+}
+// close grab
+void grab_close(uint8_t pwr) {
+  float power = float(pwr) / 255.0;
+  if (IS_GRABBER_OPEN != COMPLETE)
+    return;
+  IS_GRABBER_OPEN = CLOSING;
+  motors.run_motor(GRABBER, -power * GRAB_POWER, uint16_t(float(GRAB_DURATION) / power), 0);
 }
 
 void move_bot(int16_t lm, int16_t rm, int16_t sm) {
@@ -346,3 +353,5 @@ void run_engine(uint8_t id, int8_t pwr, uint16_t time) {
   float power = float(pwr) / 127.0;
   motors.run_motor(id, power, time, -1);
 }
+
+
