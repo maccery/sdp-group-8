@@ -190,7 +190,7 @@ class Controller(Arduino):
         'turn': '{ts}T{0}{1}{parity}{te}',
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
-        'send_binary': '{ts}B{0}{te}'
+        'send_binary': '{ts}B{0}0{parity}{te}'
     }
 
     @staticmethod
@@ -351,7 +351,7 @@ class Controller(Arduino):
         return float(duration) / 1000.0
 
 
-    def send_binary(self, binary_file):
+    def send_binary(self, binary_file, frequency):
         """
         Given a binary file location, sends the data to robot
 
@@ -364,14 +364,14 @@ class Controller(Arduino):
         try:
             byte = file.read(1)
             while byte != "":
+	        # Send the content
+	        cmd = self.COMMANDS['send_binary']
+	        cmd = self.get_command(cmd, (ord(byte), 'B'))
+	        self._write(cmd)
+		time.sleep(1. / frequency)
                 byte = file.read(1)
         finally:
             file.close()
-
-        # Send the content
-        cmd = self.COMMANDS['send_binary']
-        cmd = self.get_command(cmd, (bytes, 'b'))
-        self._write(cmd)
-
+	
         return 5000
 
