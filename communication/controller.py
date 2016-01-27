@@ -239,7 +239,8 @@ class Controller(Arduino):
         cmd = self.COMMANDS['kick']
         cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
         self._write(cmd)
-
+	time.sleep(5)
+	self.run_motor(3, -0.5, 500)
         return 0.4
 
     def move_distance(self, x=None, y=None, power=1):
@@ -300,7 +301,7 @@ class Controller(Arduino):
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
-        cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
+        cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))
         self._write(cmd)
         return duration * 0.001 + 0.07
 
@@ -320,17 +321,25 @@ class Controller(Arduino):
         angle = convert_angle(-angle)  # so it's in [-pi;pi] range
         # if angle is positive move clockwise, otw just inverse it
         power = self.MAX_POWER if angle >= 0 else -self.MAX_POWER
+	angle = abs(angle)
 
-        angle = abs(angle)
-        if angle < 0.67:
-            duration = int(angle_poly(angle) * 1000)
+	print(angle, power)
+        #angle = abs(angle)
+        #if angle < 0.67:
+        #    duration = int(angle_poly(angle) * 1000)
         #else:
             # pi/2 -> 200, pi/4 -> 110
             # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
             # duration = int(360.0 / 3.14 * angle + 20.0)
 
 	# NOTE: Changed angle to duration purely for milestone 1
-        duration = angle
+	
+	# Linear approximation from an excel spreadsheet
+	# See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
+	duration = 160.044 * (angle + 0.405)
+	duration = 0 if duration < 0 else duration
+
+	print "Duration:", duration
         duration = -duration if power < 0 else duration
         print duration
         cmd = self.COMMANDS['turn']

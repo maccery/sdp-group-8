@@ -17,6 +17,9 @@
 
 #define BinaryCheckerI2CAddress 69
 
+#define MOVE_POWER_LEVEL_LEFT 0.65
+#define MOVE_POWER_LEVEL_RIGHT 0.7
+
 #define BUFF_SIZE 32
 uint8_t buffer[BUFF_SIZE] = "";
 uint8_t buff_head = 0;
@@ -186,7 +189,7 @@ void parse_packet() {
       Serial.println("FAIL: Got move-like packet, but cmd isn't M, wat");
       return;
     }
-    move_bot(lm, rm, sm);
+    move_bot(lm, rm, sm, MOVE_POWER_LEVEL_LEFT, MOVE_POWER_LEVEL_RIGHT);
     Serial.println("ACK");
     Serial.flush();
     return;
@@ -255,7 +258,6 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   switch (cmd) {
   case 'K': kick(b1); READY = 0; return;
   case 'F': move_front(b1, b2);  READY = 0;return;
-  case 'L': move_left(b1, b2);  READY = 0;return;
   case 'T': turn(b1, b2);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
   case 'B': receive_binary(b1); READY = 0; return;
@@ -287,15 +289,7 @@ void move_front(uint8_t a, uint8_t b) {
 
   int16_t d = reint(a, b);
   
-  return move_bot(d, d, 0);
-}
-
-void move_left(uint8_t a, uint8_t b) {
-  // We will only turn if the robot is in the 'ready' state
-  if (READY == 0) return;
-
-  int16_t d = reint(a, b);
-  return move_bot(-d, d, d);
+  return move_bot(d, d, 0, MOVE_POWER_LEVEL_LEFT, MOVE_POWER_LEVEL_RIGHT);
 }
 
 void turn(uint8_t a, uint8_t b) {
@@ -303,7 +297,7 @@ void turn(uint8_t a, uint8_t b) {
   if (READY == 0) return;
 
   int16_t d = reint(a, b);
-  return move_bot(-d, d, -d);
+  return move_bot(-d, d, -d, 1.0, 1.0);
 }
 
 void stop_engines() {
@@ -333,13 +327,13 @@ void kick(uint8_t pwr) {
     //kick_f(power * KICK_POWER, uint16_t(float(KICK_DURATION)));
 }
 
-void move_bot(int16_t lm, int16_t rm, int16_t sm) {
+void move_bot(int16_t lm, int16_t rm, int16_t sm, float left_power, float right_power) {
   if (READY == 0) return;
   uint16_t lag = motors.get_max_lag(movement_motors, 4);
 
-  motors.run_motor(LEFT_MOTOR, lm > 0? 1 : -1, abs(lm), motors.get_adj_lag(LEFT_MOTOR, lag));
-  motors.run_motor(RIGHT_MOTOR, rm > 0? 1 : -1, abs(rm), motors.get_adj_lag(RIGHT_MOTOR, lag));
-  motors.run_motor(SINGLE_MOTOR, sm > 0? 1 : -1, abs(sm), motors.get_adj_lag(SINGLE_MOTOR, lag));
+  motors.run_motor(LEFT_MOTOR, lm > 0? left_power : -left_power, abs(lm), motors.get_adj_lag(LEFT_MOTOR, lag));
+  motors.run_motor(RIGHT_MOTOR, rm > 0? right_power : -right_power, abs(rm), motors.get_adj_lag(RIGHT_MOTOR, lag));
+  motors.run_motor(SINGLE_MOTOR, sm > 0? left_power : -left_power, abs(sm), motors.get_adj_lag(SINGLE_MOTOR, lag));
 }
 
 void run_engine(uint8_t id, int8_t pwr, uint16_t time) {
