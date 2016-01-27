@@ -185,13 +185,14 @@ class Controller(Arduino):
     COMMANDS = {
         'kick': '{ts}K{0}{1}{parity}{te}',
         'move_straight': '{ts}F{0}{1}{parity}{te}',
-        'move_left': '{ts}L{0}{1}{parity}{te}',
         'move': '{ts}V{0}{1}{2}{3}{4}{5}{6}{7}{8}{te}',
         'turn': '{ts}T{0}{1}{parity}{te}',
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
         'send_binary': '{ts}B{0}0{parity}{te}'
     }
+
+    MAX_POWER = 1
 
     @staticmethod
     def get_command(cmd, *params):
@@ -238,10 +239,11 @@ class Controller(Arduino):
         cmd = self.COMMANDS['kick']
         cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
         self._write(cmd)
-
+	time.sleep(5)
+	self.run_motor(3, -0.5, 500)
         return 0.4
 
-    def move(self, x=None, y=None, power=1):
+    def move_distance(self, x=None, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
@@ -293,13 +295,13 @@ class Controller(Arduino):
         self._write(cmd)
         return duration * 0.001 + 0.07
 
-    def go(self, duration):
+    def move_duration(self, duration):
         """
         Moves robot for a specified duration
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
-        cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
+        cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))
         self._write(cmd)
         return duration * 0.001 + 0.07
 
@@ -308,24 +310,36 @@ class Controller(Arduino):
         self._write(cmd, important=True)
         return 0.01
 
-    def turn(self, angle):
+    def turn_clockwise(self, angle):
         """
-        Turns the robot at a specific angle
+        Turns the robot at a specific angle, positive is clockwise
+
         :param angle: given in radians
         :return: duation the Ardunio to be blocked for
         """
-
+	
         angle = convert_angle(-angle)  # so it's in [-pi;pi] range
         # if angle is positive move clockwise, otw just inverse it
         power = self.MAX_POWER if angle >= 0 else -self.MAX_POWER
+	angle = abs(angle)
 
-        angle = abs(angle)
-        if angle < 0.67:
-            duration = int(angle_poly(angle) * 1000)
-        else:
+	print(angle, power)
+        #angle = abs(angle)
+        #if angle < 0.67:
+        #    duration = int(angle_poly(angle) * 1000)
+        #else:
             # pi/2 -> 200, pi/4 -> 110
             # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
-            duration = int(360.0 / 3.14 * angle + 20.0)
+            # duration = int(360.0 / 3.14 * angle + 20.0)
+
+	# NOTE: Changed angle to duration purely for milestone 1
+	
+	# Linear approximation from an excel spreadsheet
+	# See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
+	duration = 160.044 * (angle + 0.405)
+	duration = 0 if duration < 0 else duration
+
+	print "Duration:", duration
         duration = -duration if power < 0 else duration
         print duration
         cmd = self.COMMANDS['turn']
@@ -356,6 +370,7 @@ class Controller(Arduino):
         Given a binary file location, sends the data to robot
 
         :param binary_file:
+        :param frequency: how frequent you send the bytes
         :return: Duration to block Ardino for
         """
 
@@ -364,12 +379,12 @@ class Controller(Arduino):
         try:
             byte = file.read(1)
             while byte != "":
-	        # Send the content
+            # Send the content
 	        cmd = self.COMMANDS['send_binary']
-	        cmd = self.get_command(cmd, (ord(byte), 'B'))
-	        self._write(cmd)
-		time.sleep(1. / frequency)
-                byte = file.read(1)
+            cmd = self.get_command(cmd, (ord(byte), 'B'))
+            self._write(cmd)
+            time.sleep(1. / frequency)
+
         finally:
             file.close()
 	
