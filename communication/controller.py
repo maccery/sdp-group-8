@@ -378,13 +378,13 @@ class Controller(Arduino):
         file = open(binary_file, "rb")
         try:
             byte = file.read(1)
-            while byte != "":
+	    while byte != "":
             # Send the content
-	        cmd = self.COMMANDS['send_binary']
-            cmd = self.get_command(cmd, (ord(byte), 'B'))
-            self._write(cmd)
-            time.sleep(1. / frequency)
-
+                cmd = self.COMMANDS['send_binary']
+                cmd = self.get_command(cmd, (ord(byte), 'B'))
+                self._write(cmd)
+                time.sleep(1. / frequency)
+                byte = file.read(1)
         finally:
             file.close()
 	
