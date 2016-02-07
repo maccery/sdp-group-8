@@ -249,7 +249,7 @@ class Communication(Arduino):
         self.run_motor(3, -0.5, 500)
         return 0.4
 
-    def move_distance(self, x=None, y=None, power=1):
+    def move_distance(self, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
@@ -260,21 +260,20 @@ class Communication(Arduino):
         :return: duration it will be blocked
         """
 
-        print "attempting move ({0}, {1})".format(x, y)
+        print "attempting move ({1})".format(y)
 
-        x = None if -0.01 < x < 0.01 else x
         y = None if -0.01 < y < 0.01 else y
 
-        print "clamp move ({0}, {1})".format(x, y)
+        print "clamp move ({1})".format(y)
 
         try:
-            assert x or y, "You need to supply some distance"
-            assert not (x and y), "You can only supply distance in one axis"
+            assert y, "You need to supply some distance"
         except Exception as e:
             print e
             return 0
 
-        distance = x or y
+        distance = y
+
         # If the distance is less than 0, then we're going in a different direction and need a "negative" duration
         if distance < 0:
             duration = -get_duration(-distance, power)
@@ -289,16 +288,10 @@ class Communication(Arduino):
                                                                                         distance=distance)
             return 0
 
-        # If we're given a command on the x axis, we need to move forwards
-        if x:
-            cmd = self.COMMANDS['move_straight']
-
-        # Otherwise we need to move in the left
-        else:
-            cmd = self.COMMANDS['move_left']
-
-        cmd = self.get_command(cmd, (duration, 'h'))  # short
+        cmd = self.COMMANDS['move_straight']
+        cmd = self.get_command(cmd, (duration, 'h'))
         self._write(cmd)
+
         return duration * 0.001 + 0.07
 
     def move_duration(self, duration):
