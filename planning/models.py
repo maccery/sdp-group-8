@@ -191,6 +191,10 @@ class Robot(PitchObject):
 
     @property
     def catcher_area(self):
+        """
+
+        :return: Polygon
+        """
         front_left = (self.x + self._catcher_area['front_offset'] + self._catcher_area['height'], self.y + self._catcher_area['width']/2.0)
         front_right = (self.x + self._catcher_area['front_offset'] + self._catcher_area['height'], self.y - self._catcher_area['width']/2.0)
         back_left = (self.x + self._catcher_area['front_offset'], self.y + self._catcher_area['width']/2.0)
@@ -213,9 +217,10 @@ class Robot(PitchObject):
         self._catcher = new_position
 
     def can_catch_ball(self, ball):
-        '''
-        Get if the ball is in the catcher zone but may not have possession
-        '''
+        """
+        Get if the ball is in the catcher zone but may not have possession. This is done using the vision system
+        to detect whether the ball is inside the catcher area
+        """
         return self.catcher_area.isInside(ball.x, ball.y)
 
     def has_ball(self, ball):

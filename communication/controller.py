@@ -7,15 +7,22 @@ import atexit
 from lib.math.util import convert_angle, get_duration
 import numpy as np
 
+"""
+This file deals with communication with Arduino and fundamental tasks such as moving forward, grabbing and kicking.
+How these tasks are performed and controlled is handled by our_controller.py
+"""
+
 # polynomial approximating low angle durations
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
 LOG_FILE = None
+
 
 def log_write(msg, flush=False):
     msg_format = "[{time:.3f}] {msg}\n"
     msg = msg.replace('\r', '\\r').replace('\n', '\\n')
     LOG_FILE.write(msg_format.format(time=time.time(), msg=msg))
     LOG_FILE.flush()
+
 
 def send_msg(s, msg, timeout, retries, ack):
     global LOG_FILE
@@ -31,7 +38,8 @@ def send_msg(s, msg, timeout, retries, ack):
         end_time = time.time()
         while end_time - start_time < timeout:
             r = s.readline()
-            log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r, timeout - time.time() + start_time))
+            log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r,
+                                                                                           timeout - time.time() + start_time))
             buff += r
             if r:
                 print 'Got msg "{0}" from upstream'.format(r)
@@ -51,6 +59,7 @@ def send_msg(s, msg, timeout, retries, ack):
         log_write("no msg was ack'd, giving up")
         return False
 
+
 def ready_waiter(s, avail, timeout, retries=None):
     if avail.value == 1:
         return True
@@ -63,6 +72,7 @@ def ready_waiter(s, avail, timeout, retries=None):
     print 'Arduino not ready :/'
     avail.value = 0
     return False
+
 
 class MockSerial(object):
     def __init__(self, *args, **kwargs):
@@ -128,8 +138,10 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             print 'msg properly sent to arduino'
             continue
 
-class Arduino(object):
+
+class Arduino():
     """ Basic class for Arduino communications. """
+
     def __init__(self, port='/dev/ttyUSB0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
                  ack_tries=4):
         self.port = port
@@ -179,7 +191,7 @@ LAST_MSG = 0
 
 # This function takes the commands from the command line and converts them to
 # commands for the Ardunio
-class Controller(Arduino):
+class Communication(Arduino):
     """ Implements an interface for Arduino device. """
 
     COMMANDS = {
@@ -212,12 +224,6 @@ class Controller(Arduino):
             # arduino is little endian!
             r = list(struct.pack('<' + fmt, v))
             bytes += r
-            # print r
-            # print struct.unpack('<h', ''.join(r))
-
-        def xor_bytes(a, b):
-            b = struct.unpack('B', b)[0]
-            return a ^ b
 
         global LAST_MSG
         if LAST_MSG > 128:
@@ -239,8 +245,8 @@ class Controller(Arduino):
         cmd = self.COMMANDS['kick']
         cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
         self._write(cmd)
-	time.sleep(5)
-	self.run_motor(3, -0.5, 500)
+        time.sleep(5)
+        self.run_motor(3, -0.5, 500)
         return 0.4
 
     def move_distance(self, x=None, y=None, power=1):
@@ -317,29 +323,29 @@ class Controller(Arduino):
         :param angle: given in radians
         :return: duation the Ardunio to be blocked for
         """
-	
+
         angle = convert_angle(-angle)  # so it's in [-pi;pi] range
         # if angle is positive move clockwise, otw just inverse it
         power = self.MAX_POWER if angle >= 0 else -self.MAX_POWER
-	angle = abs(angle)
+        angle = abs(angle)
 
-	print(angle, power)
-        #angle = abs(angle)
-        #if angle < 0.67:
+        print(angle, power)
+        # angle = abs(angle)
+        # if angle < 0.67:
         #    duration = int(angle_poly(angle) * 1000)
-        #else:
-            # pi/2 -> 200, pi/4 -> 110
-            # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
-            # duration = int(360.0 / 3.14 * angle + 20.0)
+        # else:
+        # pi/2 -> 200, pi/4 -> 110
+        # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
+        # duration = int(360.0 / 3.14 * angle + 20.0)
 
-	# NOTE: Changed angle to duration purely for milestone 1
-	
-	# Linear approximation from an excel spreadsheet
-	# See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
-	duration = 160.044 * (angle + 0.405)
-	duration = 0 if duration < 0 else duration
+        # NOTE: Changed angle to duration purely for milestone 1
 
-	print "Duration:", duration
+        # Linear approximation from an excel spreadsheet
+        # See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
+        duration = 160.044 * (angle + 0.405)
+        duration = 0 if duration < 0 else duration
+
+        print "Duration:", duration
         duration = -duration if power < 0 else duration
         print duration
         cmd = self.COMMANDS['turn']
@@ -364,7 +370,6 @@ class Controller(Arduino):
 
         return float(duration) / 1000.0
 
-
     def send_binary(self, binary_file, frequency):
         """
         Given a binary file location, sends the data to robot
@@ -378,8 +383,8 @@ class Controller(Arduino):
         file = open(binary_file, "rb")
         try:
             byte = file.read(1)
-	    while byte != "":
-            # Send the content
+            while byte != "":
+                # Send the content
                 cmd = self.COMMANDS['send_binary']
                 cmd = self.get_command(cmd, (ord(byte), 'B'))
                 self._write(cmd)
@@ -387,6 +392,5 @@ class Controller(Arduino):
                 byte = file.read(1)
         finally:
             file.close()
-	
-        return 5000
 
+        return 5000
