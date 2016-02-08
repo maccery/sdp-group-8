@@ -1,6 +1,7 @@
 from Polygon.cPolygon import Polygon
 from math import cos, sin, hypot, pi, atan2
 from vision import tools
+from milestone2.tasks import Task
 
 # Width measures the front and back of an object
 # Length measures along the sides of an object
@@ -154,6 +155,8 @@ class Robot(PitchObject):
         # Inherit the super class (PitchObjects) initialiser code
         super(Robot, self).__init__(x, y, width, length, height, angle)
         self._catcher = 'open'
+        self._is_busy = False
+        self._tasks = Task(self)
 
     @property
     def catcher_area(self):
@@ -177,6 +180,14 @@ class Robot(PitchObject):
         self._catcher_area = area_dict
 
     @property
+    def is_busy(self):
+        return self._is_busy
+
+    @is_busy.setter
+    def is_busy(self, boolean):
+        self._is_busy = boolean
+
+    @property
     def catcher(self):
         return self._catcher
 
@@ -198,7 +209,7 @@ class Robot(PitchObject):
         '''
         return (self._catcher == 'closed') and self.can_catch_ball(ball)
 
-    def get_rotation_to_point(self, target_coordinates):
+    def get_rotation_to_point(self, target_vector):
         """
         Calculates the rotation required to achieve alignment with given co-ordinates
 
@@ -206,8 +217,8 @@ class Robot(PitchObject):
         :return: angle
         """
 
-        delta_x = target_coordinates.vector.x - self.x
-        delta_y = target_coordinates.vector.y - self.y
+        delta_x = target_vector.x - self.x
+        delta_y = target_vector.y - self.y
         displacement = hypot(delta_x, delta_y)
         if displacement == 0:
             theta = 0
@@ -221,7 +232,7 @@ class Robot(PitchObject):
 
         return theta
 
-    def get_displacement_to_point(self, target_coordinates):
+    def get_displacement_to_point(self, target_vector):
         """
         Uses the euclidean distance to calculate the displacement between this robot and a target co-ordinates
 
@@ -229,8 +240,8 @@ class Robot(PitchObject):
         :return: displacement
         """
 
-        delta_x = target_coordinates.vector.x - self.x
-        delta_y = target_coordinates.vector.y - self.y
+        delta_x = target_vector.x - self.x
+        delta_y = target_vector.y - self.y
         displacement = hypot(delta_x, delta_y)
 
         return displacement
