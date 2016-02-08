@@ -7,11 +7,6 @@ import atexit
 from lib.math.util import convert_angle, get_duration
 import numpy as np
 
-"""
-This file deals with communication with Arduino and fundamental tasks such as moving forward, grabbing and kicking.
-How these tasks are performed and controlled is handled by our_controller.py
-"""
-
 # polynomial approximating low angle durations
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
 LOG_FILE = None
@@ -139,7 +134,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             continue
 
 
-class Arduino():
+class Arduino(object):
     """ Basic class for Arduino communications. """
 
     def __init__(self, port='/dev/ttyUSB0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
@@ -191,7 +186,7 @@ LAST_MSG = 0
 
 # This function takes the commands from the command line and converts them to
 # commands for the Ardunio
-class Communication(Arduino):
+class Controller(Arduino):
     """ Implements an interface for Arduino device. """
 
     COMMANDS = {
@@ -201,7 +196,9 @@ class Communication(Arduino):
         'turn': '{ts}T{0}{1}{parity}{te}',
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
-        'send_binary': '{ts}B{0}0{parity}{te}'
+        'send_binary': '{ts}B{0}0{parity}{te}',
+        'grab': '{ts}G{0}{1}{parity}{te}',
+        'ungrab': '{ts}U{0}{1}{parity}{te}'
     }
 
     MAX_POWER = 1
@@ -224,6 +221,12 @@ class Communication(Arduino):
             # arduino is little endian!
             r = list(struct.pack('<' + fmt, v))
             bytes += r
+            # print r
+            # print struct.unpack('<h', ''.join(r))
+
+        def xor_bytes(a, b):
+            b = struct.unpack('B', b)[0]
+            return a ^ b
 
         global LAST_MSG
         if LAST_MSG > 128:
@@ -249,8 +252,29 @@ class Communication(Arduino):
         self.run_motor(3, -0.5, 500)
         return 0.4
 
+    def grab(self):
+        """
+        Grabs the ball
+        :return: duration it will be blocked
+        """
 
-    def move_distance(self, y=None, power=1):
+        cmd = self.COMMANDS['grab']
+        cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+        self._write(cmd)
+        return 0.2
+
+    def ungrab(self):
+        """
+        Ungrabs the ball
+        :return: duration it will be blocked
+        """
+
+        cmd = self.COMMANDS['ungrab']
+        cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+        self._write(cmd)
+        return 0.2
+
+    def move_distance(self, x=None, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.
         NB. currently doesn't support movements on both axes (i.e. one of x and y must be 0 or None)
@@ -261,20 +285,21 @@ class Communication(Arduino):
         :return: duration it will be blocked
         """
 
-        print "attempting move ({1})".format(y)
+        print "attempting move ({0}, {1})".format(x, y)
 
+        x = None if -0.01 < x < 0.01 else x
         y = None if -0.01 < y < 0.01 else y
 
-        print "clamp move ({1})".format(y)
+        print "clamp move ({0}, {1})".format(x, y)
 
         try:
-            assert y, "You need to supply some distance"
+            assert x or y, "You need to supply some distance"
+            assert not (x and y), "You can only supply distance in one axis"
         except Exception as e:
             print e
             return 0
 
-        distance = y
-
+        distance = x or y
         # If the distance is less than 0, then we're going in a different direction and need a "negative" duration
         if distance < 0:
             duration = -get_duration(-distance, power)
@@ -289,10 +314,16 @@ class Communication(Arduino):
                                                                                         distance=distance)
             return 0
 
-        cmd = self.COMMANDS['move_straight']
-        cmd = self.get_command(cmd, (duration, 'h'))
-        self._write(cmd)
+        # If we're given a command on the x axis, we need to move forwards
+        if x:
+            cmd = self.COMMANDS['move_straight']
 
+        # Otherwise we need to move in the left
+        else:
+            cmd = self.COMMANDS['move_left']
+
+        cmd = self.get_command(cmd, (duration, 'h'))  # short
+        self._write(cmd)
         return duration * 0.001 + 0.07
 
     def move_duration(self, duration):

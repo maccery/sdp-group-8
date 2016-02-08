@@ -17,8 +17,8 @@
 
 #define BinaryCheckerI2CAddress 69
 
-#define MOVE_POWER_LEVEL_LEFT 0.65
-#define MOVE_POWER_LEVEL_RIGHT 0.7
+#define MOVE_POWER_LEVEL_LEFT 1.0
+#define MOVE_POWER_LEVEL_RIGHT 0.85
 
 #define BUFF_SIZE 32
 uint8_t buffer[BUFF_SIZE] = "";
@@ -29,12 +29,11 @@ long LAST_MATCH_ID = -1;
 MotorBoard motors;
 
 enum MOTORS {
-  SINGLE_MOTOR = 2,
+  RIGHT_GRABBER = 1,
+  LEFT_GRABBER = 2,
+  KICKER = 3,
   LEFT_MOTOR = 4,
   RIGHT_MOTOR = 5,
-
-  KICKER = 3,
-
   MAX_ENGINES = 6
 };
 
@@ -261,6 +260,8 @@ void command(char cmd, uint8_t b1, uint8_t b2) {
   case 'T': turn(b1, b2);  READY = 0;return;
   case 'S': stop_engines(); READY = 0; return;
   case 'B': receive_binary(b1); READY = 0; return;
+  case 'G': grab(); READY = 0; return;
+  case 'U': ungrab(); READY = 0; return;
   default: READY = 1; MATCHED_CMD = 0;
   }
 }
@@ -297,14 +298,25 @@ void turn(uint8_t a, uint8_t b) {
   if (READY == 0) return;
 
   int16_t d = reint(a, b);
-  return move_bot(-d, d, -d, 1.0, 1.0);
+  return move_bot(-d, d, 0, 1.0, 1.0);
 }
 
 void stop_engines() {
   // only stops movement engines!
   motors.stop_motor(LEFT_MOTOR);
   motors.stop_motor(RIGHT_MOTOR);
-  motors.stop_motor(SINGLE_MOTOR);
+  motors.stop_motor(LEFT_GRABBER);
+  motors.stop_motor(RIGHT_GRABBER);
+}
+
+void grab() {
+  motors.run_motor(LEFT_GRABBER, 0.5, uint16_t(float(150)), -1);
+  motors.run_motor(RIGHT_GRABBER, -0.3, uint16_t(float(150)), -1);
+}
+
+void ungrab() {
+  motors.run_motor(LEFT_GRABBER, -0.5, uint16_t(float(150)), -1);
+  motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(150)), -1);
 }
 
 /*
@@ -314,17 +326,14 @@ void kick(uint8_t pwr) {
     MATCHED=1;
     
     // Firstly bring the kicker back
-    motors.run_motor(KICKER, -0.3, uint16_t(float(300)), -1);
+    motors.run_motor(KICKER, 0.2, uint16_t(float(800)), -1);
     //delay(310);
     
     IS_KICKING = HAPPENING;
 
     // Runs the motor at the given motor, the for KICK_DURATION lenght of time
-    motors.run_motor(KICKER, float(pwr)/255.0, uint16_t(float(250)), 300);
-    
-    // Then kick forwards at the power given
-    //float power = float(pwr) / 255.0;
-    //kick_f(power * KICK_POWER, uint16_t(float(KICK_DURATION)));
+    motors.run_motor(KICKER, -1.0*float(pwr), uint16_t(float(300)/float(pwr)), 800);
+    motors.run_motor(KICKER, 0.2, uint16_t(float(800)), 2000);
 }
 
 void move_bot(int16_t lm, int16_t rm, int16_t sm, float left_power, float right_power) {
@@ -333,7 +342,6 @@ void move_bot(int16_t lm, int16_t rm, int16_t sm, float left_power, float right_
 
   motors.run_motor(LEFT_MOTOR, lm > 0? left_power : -left_power, abs(lm), motors.get_adj_lag(LEFT_MOTOR, lag));
   motors.run_motor(RIGHT_MOTOR, rm > 0? right_power : -right_power, abs(rm), motors.get_adj_lag(RIGHT_MOTOR, lag));
-  motors.run_motor(SINGLE_MOTOR, sm > 0? left_power : -left_power, abs(sm), motors.get_adj_lag(SINGLE_MOTOR, lag));
 }
 
 void run_engine(uint8_t id, int8_t pwr, uint16_t time) {
