@@ -12,18 +12,27 @@ class Task:
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
-    def move_to_ball(self, target_vector):
+    def move_to_ball(self, ball_vector):
         # The list of subtasks we need to execute to complete this big task
-        subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
-                        self.subtasks.move_to_coordinates(target_vector)]
+        subtask_list = [self.subtasks.rotate_to_alignment(ball_vector),
+                        self.subtasks.move_to_coordinates(ball_vector)]
 
         self.execute_tasks(subtask_list)
+
+    def move_and_grab_ball(self, ball_vector):
+        subtask_list = [self.subtasks.rotate_to_alignment(ball_vector),
+                        self.subtasks.grab_ball(),
+                        self.subtasks.move_to_coordinates(ball_vector)]
+
+        self.execute_tasks(subtask_list)
+
 
     def kick_ball_in_goal(self, goal_vector):
         target_vector = goal_vector
 
         # Turn and face the goal, then kick the ball
         subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
+                        self.subtasks.ungrab_ball(),
                         self.subtasks.kick_ball()]
 
         self.execute_tasks(subtask_list)
@@ -78,12 +87,16 @@ class Subtasks:
 
         time.sleep(wait_time)
 
-    def kick_ball(self):
-        """
-        This robot is told to kick
-        """
-        wait_time = self.communicate.kick()
+    def ungrab_ball(self):
+        wait_time = self.communicate.ungrab()
+        time.sleep(wait_time)
 
+    def grab_ball(self):
+        wait_time = self.communicate.grab()
+        time.sleep(wait_time)
+
+    def kick_ball(self):
+        wait_time = self.communicate.kick()
         time.sleep(wait_time)
 
     @staticmethod

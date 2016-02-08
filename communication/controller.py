@@ -186,7 +186,7 @@ LAST_MSG = 0
 
 # This function takes the commands from the command line and converts them to
 # commands for the Ardunio
-class Controller(Arduino):
+class Communication(Arduino):
     """ Implements an interface for Arduino device. """
 
     COMMANDS = {

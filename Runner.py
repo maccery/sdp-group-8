@@ -74,6 +74,8 @@ class Runner(object):
                         self.world.our_robot.tasks.move_to_ball(ball_vector)
                     if task is 'kick_ball_in_goal':
                         self.world.our_robot.tasks.kick_ball_in_goal()
+                    if task is 'move_and_grab_ball':
+                        self.world.our_robot.tasks.move_and_grab_ball()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):

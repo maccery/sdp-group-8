@@ -151,9 +151,9 @@ class PitchObject(object):
 
 
 class Robot(PitchObject):
-    def __init__(self, zone, x, y, angle, width=ROBOT_WIDTH, length=ROBOT_LENGTH, height=ROBOT_HEIGHT):
+    def __init__(self, zone, x, y, angle):
         # Inherit the super class (PitchObjects) initialiser code
-        super(Robot, self).__init__(x, y, width, length, height, angle)
+        super(Robot, self).__init__(x, y, ROBOT_WIDTH, ROBOT_LENGTH, ROBOT_HEIGHT, angle)
         self._catcher = 'open'
         self._is_busy = False
         self._tasks = Task(self)
@@ -249,7 +249,7 @@ class Robot(PitchObject):
 
 class Ball(PitchObject):
     def __init__(self, x, y, angle, velocity):
-        super(Ball, self).__init__(x, y, angle, velocity, BALL_WIDTH, BALL_LENGTH, BALL_HEIGHT)
+        super(Ball, self).__init__(x, y, angle, BALL_WIDTH, BALL_LENGTH, BALL_HEIGHT)
 
 
 class Goal(PitchObject):
