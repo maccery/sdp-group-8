@@ -197,6 +197,9 @@ class Robot(PitchObject):
         target_poly = target.get_polygon()
         return Polygon(robot_poly[0], robot_poly[1], target_poly[0], target_poly[1])
 
+    def update_position(self, pos_dict):
+
+
     def __repr__(self):
         return ('zone: %s\nx: %s\ny: %s\nangle: %s\nvelocity: %s\ndimensions: %s\n' %
                 (self._zone, self.x, self.y,
@@ -223,18 +226,21 @@ class Goal(PitchObject):
 
 
 class Pitch(object):
-    '''
-    Class that describes the pitch
-    '''
-
     def __init__(self, pitch_num):
+        """
+        :param pitch_num: Number of the pitch, as specified in the calibration file
+        """
+
+        # Parse the JSON data from the calibrations file which describes the pitch
         config_json = tools.get_croppings(pitch=pitch_num)
 
+        # Work out the height and width of the pitch and update these parameters
         self._width = max([point[0] for point in config_json['outline']]) - min(
                 [point[0] for point in config_json['outline']])
         self._height = max([point[1] for point in config_json['outline']]) - min(
                 [point[1] for point in config_json['outline']])
-        # Getting the zones:
+
+        # Initialise the zones and create polygons to represent these zones
         self._zones = []
         self._zones.append(Polygon([(x, self._height - y) for (x, y) in config_json['Zone_0']]))
         self._zones.append(Polygon([(x, self._height - y) for (x, y) in config_json['Zone_1']]))
@@ -242,9 +248,9 @@ class Pitch(object):
         self._zones.append(Polygon([(x, self._height - y) for (x, y) in config_json['Zone_3']]))
 
     def is_within_bounds(self, robot, x, y):
-        '''
+        """
         Checks whether the position/point planned for the robot is reachable
-        '''
+        """
         zone = self._zones[robot.zone]
         return zone.isInside(x, y)
 
@@ -262,32 +268,19 @@ class World(object):
     This class describes the environment; the pitch, the ball, the robots...
     """
 
-    def __init__(self, our_side, pitch_num):
+    def __init__(self, pitch_num):
         self._pitch = Pitch(pitch_num)
         self._ball = Ball(0, 0, 0, 0)
-        self._robots = []
-        self._robots.append(Robot(0, 0, 0, 0, 0))
+        self._our_robot = Robot(0, 0, 0, 0)
 
     @property
     def pitch(self):
-        return self._pitch
+        return self.pitch
 
-    def update_positions(self, pos_dict):
-        """
-        This method will update the positions of the pitch objects
-        that it gets passed by the vision system
-        :param pos_dict:
-        """
-        self.our_attacker.vector = pos_dict['our_attacker']
-        self.their_attacker.vector = pos_dict['their_attacker']
-        self.our_defender.vector = pos_dict['our_defender']
-        self.their_defender.vector = pos_dict['their_defender']
-        self.ball.vector = pos_dict['ball']
-        # Checking if the robot locations make sense:
-        # Is the side correct:
-        if (self._our_side == 'left' and not (self.our_defender.x < self.their_attacker.x
-                                                  < self.our_attacker.x < self.their_defender.x)):
-            print "WARNING: The sides are probably wrong!"
-        if (self._our_side == 'right' and not (self.our_defender.x > self.their_attacker.x
-                                                   > self.our_attacker.x > self.their_defender.x)):
-            print "WARNING: The sides are probably wrong!"
+    @property
+    def ball(self):
+        return self.ball
+
+    @property
+    def our_robot(self):
+        return self.our_robot

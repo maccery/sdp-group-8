@@ -27,6 +27,11 @@ class Vision(object):
         # assert croppings['x2'] - croppings['x1'] == MAX_WIDTH
 
     def recognize_ball(self):
+        """
+        Recgonitions where the radius is
+
+        :return: radius, center, modified_frame
+        """
         modified_frame = self.frame
         ball = self.calibrations['ball']
         open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ball['morph_open'], ball['morph_open']))

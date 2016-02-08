@@ -1,3 +1,5 @@
+from milestone2.models import World
+from postprocessing import PostProcessing
 from vision.vision import Vision, GUI
 from vision.vision import dump_calibrations
 from vision import tools
@@ -5,8 +7,8 @@ from cv2 import waitKey
 import cv2
 import time
 
-class Runner(object):
 
+class Runner(object):
     def __init__(self, pitch, color, video_port=0, comm_port='/dev/ttyACM0', comms=1):
         """
         Parameters:
@@ -21,18 +23,16 @@ class Runner(object):
         self.pitch = pitch
 
         # Set up Arduino communications.
-        # self.robot = 
-
-        if pitch == 0:
-            self.calib_file = "vision/calibrations/calibrations.json"
-        # else:
-        #     self.calib_file = "vision/calibrations.json"
-
+        # self.robot =
+        self.calib_file = "vision/calibrations/calibrations.json"
         self.vision = Vision(self.calib_file)
         self.gui = GUI(self.vision.calibrations)
 
         # Set up world
-        # self.world = World(our_side, self.calib_file)
+        self.world = World(self.calib_file)
+
+        # Set up post-processing
+        self.postprocessing = PostProcessing()
 
         # Set up GUI
         self.color = color
@@ -44,9 +44,6 @@ class Runner(object):
 
         counter = 1L
         timer = time.clock()
-        end = False
-        
-        skip = 0
 
         try:
             c = True
@@ -54,7 +51,7 @@ class Runner(object):
             while c != 27:  # the ESC key
                 t2 = time.time()
                 # change of time between frames in seconds
-                delta_time = t2-timer
+                delta_time = t2 - timer
                 timer = t2
 
                 # getting all the data from the world state
@@ -63,9 +60,13 @@ class Runner(object):
                 # update the gui
                 self.gui.update(delta_time, self.vision.frame, modified_frame, data)
 
-                # Process the data from the frame
-                model_positions, regular_positions = self.get_positions(frame, pre_options)
-                self.world.update_positions(data)
+                # Recgonise the ball and our robot; note these functions don't currently return vectors....
+                ball = self.vision.recognize_ball()
+                our_robot = self.vision.recognize_plates()
+
+                # Update the position of our ball and our robot in the world
+                self.world.ball.vector = ball
+                self.world.our_robot.vector = our_robot
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
@@ -84,12 +85,13 @@ class Runner(object):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser()
     # Havent done anything for right pitch yet. So choose option 0.
     parser.add_argument("pitch", help="[0] Left pitch, [1] Right pitch")
     # parser.add_argument("side", help="The side of our defender ['left', 'right'] allowed.")
     parser.add_argument("color", help="The color of our team - ['yellow', 'blue'] allowed.")
-    #parser.add_argument("attack_defend", help="Are we attacking or defending? - ['attack', 'defend']")
+    # parser.add_argument("attack_defend", help="Are we attacking or defending? - ['attack', 'defend']")
     # parser.add_argument(
     #     "-n", "--nocomms", help="Disables sending commands to the robot.", action="store_true")
 
@@ -99,4 +101,4 @@ if __name__ == '__main__':
     #         pitch=int(args.pitch), color=args.color, our_side=args.side, attack_defend='attack', comms=0).run()
     # else:
     c = Runner(
-        pitch=int(args.pitch), color=args.color).run()
+            pitch=int(args.pitch), color=args.color).run()
