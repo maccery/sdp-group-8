@@ -1,4 +1,4 @@
-from Polygon.cPolygon import Polygon
+# from Polygon.cPolygon import Polygon
 from math import cos, sin, hypot, pi, atan2
 from vision import tools
 from milestone2.tasks import Task
@@ -118,14 +118,6 @@ class PitchObject(object):
         return self._vector.angle
 
     @property
-    def x(self):
-        return self._vector.x
-
-    @property
-    def y(self):
-        return self._vector.y
-
-    @property
     def vector(self):
         return self._vector
 
@@ -135,6 +127,8 @@ class PitchObject(object):
             raise ValueError('The new vector can not be None and must be an instance of a Vector')
         else:
             self._vector = Vector(new_vector.x, new_vector.y, new_vector.angle)
+
+    
 
     def get_generic_polygon(self, width, length):
         '''
@@ -150,7 +144,7 @@ class PitchObject(object):
         return poly[0]
 
 
-class Robot(PitchObject):
+class OldRobot(PitchObject):
     def __init__(self, zone, x, y, angle):
         # Inherit the super class (PitchObjects) initialiser code
         super(Robot, self).__init__(x, y, ROBOT_WIDTH, ROBOT_LENGTH, ROBOT_HEIGHT, angle)
@@ -208,7 +202,7 @@ class Robot(PitchObject):
         '''
         return (self._catcher == 'closed') and self.can_catch_ball(ball)
 
-    def get_rotation_to_point(self, target_vector):
+    def get_rotation_to_point(self, x, y):
         """
         Calculates the rotation required to achieve alignment with given co-ordinates
 
@@ -216,8 +210,8 @@ class Robot(PitchObject):
         :return: angle
         """
 
-        delta_x = target_vector.x - self.x
-        delta_y = target_vector.y - self.y
+        delta_x = x - self.x
+        delta_y = y - self.y
         displacement = hypot(delta_x, delta_y)
         if displacement == 0:
             theta = 0
@@ -231,7 +225,7 @@ class Robot(PitchObject):
 
         return theta
 
-    def get_displacement_to_point(self, target_vector):
+    def get_displacement_to_point(self, x, y):
         """
         Uses the euclidean distance to calculate the displacement between this robot and a target co-ordinates
 
@@ -239,14 +233,26 @@ class Robot(PitchObject):
         :return: displacement
         """
 
-        delta_x = target_vector.x - self.x
-        delta_y = target_vector.y - self.y
+        delta_x = x - self.x
+        delta_y = y - self.y
         displacement = hypot(delta_x, delta_y)
 
         return displacement
 
+class Robot(object):
+    def __init__(self, x, y, angle):
+        self.is_busy = False
+        self.x = x
+        self.y = y
+        self.angle = angle
 
-class Ball(PitchObject):
+class Ball(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        
+
+class OldBall(PitchObject):
     def __init__(self, x, y, angle, velocity):
         super(Ball, self).__init__(x, y, angle, BALL_WIDTH, BALL_LENGTH, BALL_HEIGHT)
 
@@ -309,9 +315,9 @@ class World(object):
     """
 
     def __init__(self, pitch_num):
-        self._pitch = Pitch(pitch_num)
-        self._ball = Ball(0, 0, 0, 0)
-        self._our_robot = Robot(0, 0, 0, 0)
+        # self._pitch = Pitch(pitch_num)
+        self._ball = Ball(0, 0)
+        self._our_robot = Robot(0, 0, 0)
         self._task = Task(self)
 
     @property
@@ -329,3 +335,26 @@ class World(object):
     @property
     def task(self):
         return self._task
+
+    def update_positions(self, pos_dict):
+        ''' This method will update the positions of the pitch objects
+            that it gets passed by the vision system '''
+
+        #if pos_dict['ball']['center']:
+        #  pos_dict['ball']['center'] = (pos_dict['ball']['center'][0], self.pitch.height - pos_dict['ball']['center'][1])
+        
+        #for robot in pos_dict['robots']:
+        #  robot['center'] = (robot['center'][0], self.pitch.height - robot['center'][1])
+            
+        # Index may need changing depending on which robot is there
+        for robot in pos_dict['robots']:
+            if robot['team'] == 'yellow' and robot['group'] == 'green':
+                self.our_robot.x = robot['center'][0]
+                self.our_robot.y = robot['center'][1]
+                self.our_robot.angle = robot['angle']
+
+        if pos_dict['ball']:
+            self.ball.x = pos_dict['ball']['center'][0]
+            self.ball.y = pos_dict['ball']['center'][1]
+        # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
+        # print(self.ball.x, self.ball.y)

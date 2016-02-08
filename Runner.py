@@ -9,7 +9,7 @@ import time
 
 
 class Runner(object):
-    def __init__(self, pitch, color, video_port=0, comm_port='/dev/ttyACM0', comms=1):
+    def __init__(self, pitch, color, task, video_port=0, comm_port='/dev/ttyACM0', comms=1):
         """
         Parameters:
             [int] pitch        0 - left pitch, 1 - right pitch
@@ -19,7 +19,8 @@ class Runner(object):
         """
         assert pitch in [0, 1]
         assert color in ['yellow', 'blue']
-
+        assert task in ['move_to_ball', ' kick_ball_in_goal', 'move_and_grab_balle']
+        self.task = task
         self.pitch = pitch
 
         # Set up Arduino communications.
@@ -37,7 +38,7 @@ class Runner(object):
         # Set up GUI
         self.color = color
 
-    def run(self, task):
+    def run(self):
         """
         Ready your sword, here be dragons.
         """
@@ -61,25 +62,20 @@ class Runner(object):
                 self.gui.update(delta_time, self.vision.frame, modified_frame, data)
 
                 # Recgonise the ball and our robot; note these functions don't currently return vectors....
-                ball_vector = self.vision.recognize_ball()
-                our_robot_vector = self.vision.recognize_plates()
-
-                # Update the vector of our ball and our robot in the world; vector describes position, size, velocity...
-                self.world.ball.vector = ball_vector
-                self.world.our_robot.vector = our_robot_vector
+                self.world.update_positions(data)
 
                 # Execute the given task requested
                 if self.world.our_robot.is_busy is False:
-                    if task is 'move_to_ball':
-                        self.world.task.move_to_ball(ball_vector)
-                    if task is 'kick_ball_in_goal':
-                        self.world.task.kick_ball_in_goal()
-                    if task is 'move_and_grab_ball':
-                        self.world.task.move_and_grab_ball()
+                     if self.task is 'move_to_ball':
+                         self.world.task.move_to_ball()
+                     if self.task is 'kick_ball_in_goal':
+                         self.world.task.kick_ball_in_goal()
+                     if self.task is 'move_and_grab_ball':
+                         self.world.task.move_and_grab_ball()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
-                    end = True
+                    break
                     # self.save_calibrations()
 
                 counter += 1
@@ -100,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument("pitch", help="[0] Left pitch, [1] Right pitch")
     # parser.add_argument("side", help="The side of our defender ['left', 'right'] allowed.")
     parser.add_argument("color", help="The color of our team - ['yellow', 'blue'] allowed.")
+    parser.add_argument("task")
     # parser.add_argument("attack_defend", help="Are we attacking or defending? - ['attack', 'defend']")
     # parser.add_argument(
     #     "-n", "--nocomms", help="Disables sending commands to the robot.", action="store_true")
@@ -110,4 +107,4 @@ if __name__ == '__main__':
     #         pitch=int(args.pitch), color=args.color, our_side=args.side, attack_defend='attack', comms=0).run()
     # else:
     c = Runner(
-            pitch=int(args.pitch), color=args.color).run()
+            pitch=int(args.pitch), color=args.color, task=args.task).run()

@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import json
 import tools
+import math
 
 CALIBRATIONS_FILE_PATH = 'calibrations/calibrations.json'
 
@@ -42,7 +43,7 @@ class Vision(object):
         # Convert the frame to HSV color space.
         modified_frame = cv2.cvtColor(modified_frame, cv2.COLOR_BGR2HSV)
 
-        print(ball)
+        # print(ball)
 
         red_mask = cv2.inRange(modified_frame, (ball['hue1_low'], ball['sat_low'], ball['val_low']), (ball['hue1_high'], ball['sat_high'], ball['val_high']))
         violet_mask = cv2.inRange(modified_frame, (ball['hue2_low'], ball['sat_low'], ball['val_low']), (ball['hue2_high'], ball['sat_high'], ball['val_high']))
@@ -104,9 +105,10 @@ class Vision(object):
         contours = cv2.findContours(plate_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
 
         cnt_index = 0
+        robot_data = []
         for cnt in contours:
-            print cv2.contourArea(cnt)
-            if cv2.contourArea(cnt) < 500:
+            # print cv2.contourArea(cnt)
+            if cv2.contourArea(cnt) < 1000:
                 cnt_index += 1
                 continue
             # copy the contour part from the image
@@ -123,22 +125,22 @@ class Vision(object):
             #    cv2.imshow("this", tmp)
             # count blue coloured pixels
             blue_no = self.count_pixels('blue', contour_frame)
-            print("blue", blue_no)
+            # print("blue", blue_no)
             # count yellow coloured pixels
             yellow_no = self.count_pixels('yellow', contour_frame)
-            print("yellow", yellow_no)
+            # print("yellow", yellow_no)
             # count green coloured pixels
             green_no = self.count_pixels('green', contour_frame)
-            print("green", green_no)
+            # print("green", green_no)
             # count pink coloured pixels
             pink_no =  self.count_pixels('pink', contour_frame)
             # pink_no += count_pixels(0, 0, 0, 25, 255, 255, tmp)
-            print("pink", pink_no)
+            # print("pink", pink_no)
 
             byr = blue_no / (yellow_no + 1)
             pgr = pink_no / (green_no + 1)
-            print("blue yellow ratio", byr)
-            print("pink green ratio", pgr)
+            # print("blue yellow ratio", byr)
+            # print("pink green ratio", pgr)
 
             # find the mass centre of the single circle (to find angle)
             if pgr < 1.0:
@@ -148,14 +150,14 @@ class Vision(object):
             tmp_mask = cv2.inRange(contour_frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
             m = cv2.moments(tmp_mask, True)
             (tx, ty) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
-            print(tx, ty)
+            # print(tx, ty)
             cv2.circle(self.frame, (tx, ty), 5, (255, 255, 255), -1)
 
             # find the rotated rectangle around the plate
             rect = cv2.minAreaRect(cnt)
             box = cv2.boxPoints(rect)
             box = np.int0(box)
-            print(box)
+            # print(box)
             minx, miny, maxx, maxy = 100000,100000,0,0
             for (x, y) in box:
                 miny = min(miny, y)
@@ -169,7 +171,7 @@ class Vision(object):
             # cv2.circle(image, (tx, ty), 3, (100, 100, 100), -1)
             for i in range(4):
                 tmp_dist = (box[i][0] - tx) * (box[i][0] - tx) + (box[i][1] - ty) * (box[i][1] - ty)
-                print(i, tmp_dist)
+                # print(i, tmp_dist)
                 if (tmp_dist < distance):
                     distance = tmp_dist
                     closest_corner = i
@@ -179,13 +181,25 @@ class Vision(object):
             m = cv2.moments(cnt, False);
             (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
 
+            if pgr < 1.0:
+                group = 'green'
+            else:
+                group = 'pink'
+
+            if byr < 1.0:
+                team = 'yellow'
+            else:
+                team = 'blue'
+
+            robot_data.append({'center': (cx, cy), 'angle': math.atan2(cy, cx), 'team': team, 'group': group})
             # draw direction line
             cv2.line(self.frame, (cx, cy), (cx + box[closest_corner][0] - box[(closest_corner - 1) % 4][0], cy + box[closest_corner][1] - box[(closest_corner - 1) % 4][1]),(255, 255, 255), 3)
 
             cv2.drawContours(self.frame,[box],0,(0,0,255),2)
             cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
             cnt_index += 1
-        return None, frame
+        # print(robot_data)
+        return robot_data, frame
 
     def count_pixels(self, type, mask):
         data = self.calibrations[type]
@@ -196,7 +210,7 @@ class Vision(object):
         """
         Retrieves all data from vision system.
         """
-        data = {'ball': {'center': (0, 0), 'radius': 0}, 'robots': [None, None, None, None]}
+        data = {'ball': {'center': (0, 0), 'radius': 0}, 'robots': []}
 
         self.frame = self.camera.get_frame()
         # Maybe crop the frame here?
@@ -204,14 +218,16 @@ class Vision(object):
         ball_mask = None
         ball_radius, ball_center, ball_mask = self.recognize_ball()
         if ball_center is not None:
-            print("BALL - x : %d y : %d radius : %d" % (ball_center[0], ball_center[1], ball_radius))
+            # print("BALL - x : %d y : %d radius : %d" % (ball_center[0], ball_center[1], ball_radius))
             data['ball']['radius'] = ball_radius
             data['ball']['center'] = (ball_center[0], ball_center[1])
 
 
         # Robots recognition code goes here.
         # Store things into data dictionary.
-        abc, modified_frame = self.recognize_plates()
+        plate_data, modified_frame = self.recognize_plates()
+        for robot in plate_data:
+            data['robots'].append(robot)
 
         # Should return data dictionary and the modified frame to the drawing utilities.
         return data, modified_frame

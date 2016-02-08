@@ -1,5 +1,5 @@
 from models import *
-from communication.controller import Communication
+from communication.controller import Controller
 import time
 
 
@@ -20,25 +20,24 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
-    def move_to_ball(self, ball_vector):
+    def move_to_ball(self):
         # The list of subtasks we need to execute to complete this big task
-        subtask_list = [self._subtasks.rotate_to_alignment(ball_vector),
-                        self._subtasks.move_to_coordinates(ball_vector)]
+        subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
+                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y)]
 
         self.execute_tasks(subtask_list)
 
-    def move_and_grab_ball(self, ball_vector):
-        subtask_list = [self._subtasks.rotate_to_alignment(ball_vector),
+    def move_and_grab_ball(self):
+        subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
                         self._subtasks.grab_ball(),
-                        self._subtasks.move_to_coordinates(ball_vector)]
+                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y)]
 
         self.execute_tasks(subtask_list)
 
-    def kick_ball_in_goal(self, goal_vector):
-        target_vector = goal_vector
+    def kick_ball_in_goal(self, goal_x, goal_y):
 
         # Turn and face the goal, then kick the ball
-        subtask_list = [self._subtasks.rotate_to_alignment(target_vector),
+        subtask_list = [self._subtasks.rotate_to_alignment(goal_x, goal_y),
                         self._subtasks.ungrab_ball(),
                         self._subtasks.kick_ball()]
 
@@ -62,14 +61,14 @@ class Task(object):
 
 class Subtasks(object):
     def __init__(self, world):
-        self._communicate = Communication()
+        self._communicate = Controller()
         self._world = world
 
     """
     Subtasks are one specific thing, such as 'kick', that is communicated to the Arduino
     """
 
-    def move_to_coordinates(self, target_vector):
+    def move_to_coordinates(self, x, y):
         """
         Given a specific robot, it will try and move this robot to a given co-ordinate, assuming it is facing the correct way
         already
@@ -77,7 +76,7 @@ class Subtasks(object):
         """
 
         # Calculate how long we need to run the motor for
-        distance = self._world.our_robot.get_displacement_to_point(target_vector)
+        distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         if distance < 10:
             return True
@@ -91,14 +90,14 @@ class Subtasks(object):
             time.sleep(calculated_duration)
             return False
 
-    def rotate_to_alignment(self, target_vector):
+    def rotate_to_alignment(self, x, y):
         """
         Given a specific robot, it will rotate to face a specific angle
 
         :param target_vector:
         """
 
-        angle_to_rotate = self._world.get_rotation_to_point(target_vector)
+        angle_to_rotate = self._world.get_rotation_to_point(x, y)
 
         # If the angle of rotation is less than 15 degrees, leave it how it is
         if angle_to_rotate <= 15:
