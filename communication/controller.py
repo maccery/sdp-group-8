@@ -189,7 +189,9 @@ class Controller(Arduino):
         'turn': '{ts}T{0}{1}{parity}{te}',
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
-        'send_binary': '{ts}B{0}0{parity}{te}'
+        'send_binary': '{ts}B{0}0{parity}{te}',
+	'grab': '{ts}G{0}{1}{parity}{te}',
+	'ungrab': '{ts}U{0}{1}{parity}{te}'
     }
 
     MAX_POWER = 1
@@ -242,6 +244,28 @@ class Controller(Arduino):
 	time.sleep(5)
 	self.run_motor(3, -0.5, 500)
         return 0.4
+
+    def grab(self):
+	"""
+	Grabs the ball
+	:return: duration it will be blocked
+	"""
+	
+	cmd = self.COMMANDS['grab']
+	cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+	self._write(cmd)
+	return 0.2
+
+    def ungrab(self):
+	"""
+	Ungrabs the ball
+	:return: duration it will be blocked
+	"""
+	
+	cmd = self.COMMANDS['ungrab']
+	cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+	self._write(cmd)
+	return 0.2
 
     def move_distance(self, x=None, y=None, power=1):
         """
