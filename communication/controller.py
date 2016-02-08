@@ -329,7 +329,7 @@ class Communication(Arduino):
     def move_duration(self, duration):
         """
         Moves robot for a specified duration
-        :param duration:
+        :param duration: provided in ms
         :return: Duration the arduino is to be blocked for
         """
         cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))

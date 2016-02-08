@@ -8,6 +8,14 @@ class Task(object):
         self._subtasks = Subtasks(world)
         self._world = world
 
+    @property
+    def world(self):
+        return self._world
+
+    @world.setter
+    def world(self, world):
+        self._world = world
+
     """
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
@@ -42,7 +50,11 @@ class Task(object):
 
         # Go through our task list, waiting for each task to complete before moving onto next task
         for subtask in subtask_list:
-            subtask()
+            subtask_complete = subtask()
+
+            # if the subtask isn't complete, don't move onto the next task
+            if subtask_complete is False:
+                exit()
 
         # Update the robot to non-busy status
         self._world.our_robot.is_busy = False
@@ -66,13 +78,18 @@ class Subtasks(object):
 
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(target_vector)
-        calculated_duration = self.calculate_motor_duration(distance)
 
-        # Tell arduino to move for the duration we've calculated
-        self._communicate.move_duration(calculated_duration)
+        if distance < 10:
+            return True
+        else:
+            calculated_duration = self.calculate_motor_duration(distance)
 
-        # Wait until this task has completed
-        time.sleep(calculated_duration)
+            # Tell arduino to move for the duration we've calculated
+            self._communicate.move_duration(calculated_duration)
+
+            # Wait until this task has completed
+            time.sleep(calculated_duration)
+            return False
 
     def rotate_to_alignment(self, target_vector):
         """
@@ -82,28 +99,36 @@ class Subtasks(object):
         """
 
         angle_to_rotate = self._world.get_rotation_to_point(target_vector)
-        wait_time = self._communicate.turn_clockwise(angle_to_rotate)
 
-        time.sleep(wait_time)
+        # If the angle of rotation is less than 15 degrees, leave it how it is
+        if angle_to_rotate <= 15:
+            return True
+        else:
+            wait_time = self._communicate.turn_clockwise(angle_to_rotate)
+            time.sleep(wait_time)
 
     def ungrab_ball(self):
         wait_time = self._communicate.ungrab()
         time.sleep(wait_time)
+        return True
 
     def grab_ball(self):
         wait_time = self._communicate.grab()
         time.sleep(wait_time)
+        return True
 
     def kick_ball(self):
         wait_time = self._communicate.kick()
         time.sleep(wait_time)
+        return True
 
     @staticmethod
     def calculate_motor_duration(distance):
         """
         Given a distance to travel, we need to know how long to run the motor for
-        :param distance:
+        :param distance: provided in metres
         """
 
-        # Crudely return 500ms until we have better shit
-        return 500
+        # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
+        duration = 100 + (distance * 10)
+        return duration
