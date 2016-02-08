@@ -202,6 +202,15 @@ class OldRobot(PitchObject):
         '''
         return (self._catcher == 'closed') and self.can_catch_ball(ball)
 
+    
+
+class Robot(object):
+    def __init__(self, x, y, angle):
+        self.is_busy = False
+        self.x = x
+        self.y = y
+        self.angle = angle
+
     def get_rotation_to_point(self, x, y):
         """
         Calculates the rotation required to achieve alignment with given co-ordinates
@@ -238,13 +247,6 @@ class OldRobot(PitchObject):
         displacement = hypot(delta_x, delta_y)
 
         return displacement
-
-class Robot(object):
-    def __init__(self, x, y, angle):
-        self.is_busy = False
-        self.x = x
-        self.y = y
-        self.angle = angle
 
 class Ball(object):
     def __init__(self, x, y):

@@ -137,7 +137,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
 class Arduino(object):
     """ Basic class for Arduino communications. """
 
-    def __init__(self, port='/dev/ttyUSB0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
+    def __init__(self, port='/dev/ttyACM0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
                  ack_tries=4):
         self.port = port
         self.rate = rate

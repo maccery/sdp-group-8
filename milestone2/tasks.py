@@ -21,6 +21,8 @@ class Task(object):
     """
 
     def move_to_ball(self):
+
+        print("move_to_ball command called")
         # The list of subtasks we need to execute to complete this big task
         subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
                         self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y)]
@@ -75,8 +77,12 @@ class Subtasks(object):
         :param target_vector
         """
 
+        print("Move to these co-ordinates: (", x, ",", y, ")")
+
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
+
+        print("Need to moev this distance: ", distance)
 
         if distance < 10:
             return True
@@ -96,8 +102,8 @@ class Subtasks(object):
 
         :param target_vector:
         """
-
-        angle_to_rotate = self._world.get_rotation_to_point(x, y)
+        print("Rotate to face these co-ordinates: (", x, ",", y, ")")
+        angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
 
         # If the angle of rotation is less than 15 degrees, leave it how it is
         if angle_to_rotate <= 15:

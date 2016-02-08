@@ -46,6 +46,8 @@ class Runner(object):
         counter = 1L
         timer = time.clock()
 
+        print("waiting 10 seconds for Arduino to get its shit together")
+        time.sleep(10)
         try:
             c = True
             # self.robot.ping()
@@ -64,14 +66,16 @@ class Runner(object):
                 # Recgonise the ball and our robot; note these functions don't currently return vectors....
                 self.world.update_positions(data)
 
+
                 # Execute the given task requested
                 if self.world.our_robot.is_busy is False:
-                     if self.task is 'move_to_ball':
-                         self.world.task.move_to_ball()
-                     if self.task is 'kick_ball_in_goal':
-                         self.world.task.kick_ball_in_goal()
-                     if self.task is 'move_and_grab_ball':
-                         self.world.task.move_and_grab_ball()
+                    print ("task is ", self.task)
+                    if self.task == 'move_to_ball':
+                        self.world.task.move_to_ball()
+                    if self.task == 'kick_ball_in_goal':
+                        self.world.task.kick_ball_in_goal()
+                    if self.task == 'move_and_grab_ball':
+                        self.world.task.move_and_grab_ball()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
