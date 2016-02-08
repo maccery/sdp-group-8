@@ -17,8 +17,9 @@
 
 #define BinaryCheckerI2CAddress 69
 
-#define MOVE_POWER_LEVEL_LEFT 1.0
+#define MOVE_POWER_LEVEL_LEFT 0.95
 #define MOVE_POWER_LEVEL_RIGHT 0.85
+
 
 #define BUFF_SIZE 32
 uint8_t buffer[BUFF_SIZE] = "";
@@ -310,12 +311,12 @@ void stop_engines() {
 }
 
 void grab() {
-  motors.run_motor(LEFT_GRABBER, 0.5, uint16_t(float(150)), -1);
+  motors.run_motor(LEFT_GRABBER, 0.15, uint16_t(float(150)), -1);
   motors.run_motor(RIGHT_GRABBER, -0.3, uint16_t(float(150)), -1);
 }
 
 void ungrab() {
-  motors.run_motor(LEFT_GRABBER, -0.5, uint16_t(float(150)), -1);
+  motors.run_motor(LEFT_GRABBER, -0.15, uint16_t(float(150)), -1);
   motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(150)), -1);
 }
 
@@ -332,8 +333,7 @@ void kick(uint8_t pwr) {
     IS_KICKING = HAPPENING;
 
     // Runs the motor at the given motor, the for KICK_DURATION lenght of time
-    motors.run_motor(KICKER, -1.0*float(pwr), uint16_t(float(300)/float(pwr)), 800);
-    motors.run_motor(KICKER, 0.2, uint16_t(float(800)), 2000);
+    motors.run_motor(KICKER, -1.0*float(pwr), uint16_t(float(300)/float(pwr)), 850);
 }
 
 void move_bot(int16_t lm, int16_t rm, int16_t sm, float left_power, float right_power) {

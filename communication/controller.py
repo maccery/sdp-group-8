@@ -237,13 +237,18 @@ class Controller(Arduino):
 
         if power is None:
             power = 1.0
-        power = int(abs(power) * 255.)
-        cmd = self.COMMANDS['kick']
-        cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
-        self._write(cmd)
-	time.sleep(5)
-	self.run_motor(3, -0.5, 500)
-        return 0.4
+        #power = int(abs(power) * 255.)
+        #cmd = self.COMMANDS['kick']
+        #cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
+        #self._write(cmd)
+	self.run_motor(3, 0.2, 800)
+	time.sleep(1)
+	self.run_motor(3, -1.0*power, (250/power))	
+	time.sleep(2)
+	self.run_motor(3, 0.15, 1000)
+	time.sleep(2)
+	self.run_motor(3, 0.15, 400)
+        return 4
 
     def grab(self):
 	"""
@@ -333,6 +338,20 @@ class Controller(Arduino):
         cmd = self.get_command(self.COMMANDS['stop'], (ord('T'), 'B'), (ord('O'), 'B'))
         self._write(cmd, important=True)
         return 0.01
+
+    def turn(self, duration):
+	"""
+	Turns the robot for a duration of time given. Positive is counterclockwise.
+
+	:param duration: given in milliseconds
+	:return: duration the Arduino is blocked for
+	"""
+
+	power = self.MAX_POWER if duration >= 0 else -self.MAX_POWER
+	cmd = self.COMMANDS['turn']
+        cmd = self.get_command(cmd, (duration, 'h'))  # short
+        self._write(cmd)
+	return (duration/1000)
 
     def turn_clockwise(self, angle):
         """
