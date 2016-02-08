@@ -1,523 +1,330 @@
-import cv2
-import tools
-from tracker import BallTracker, RobotTracker
-from multiprocessing import Process, Queue
-from colors import BGR_COMMON
-from collections import namedtuple
 import numpy as np
-from findHSV import CalibrationGUI
+import cv2
+import json
+import tools
 
+CALIBRATIONS_FILE_PATH = 'calibrations/calibrations.json'
 
-TEAM_COLORS = set(['yellow', 'blue'])
-SIDES = ['left', 'right']
-PITCHES = [0, 1]
+MAX_HEIGHT = 300 # To be determined !
+MAX_WIDTH = 530 # To be determined !
 
-PROCESSING_DEBUG = False
+class Vision(object):
+    calibrations = None
+    camera = None
+    frame = None
 
-Center = namedtuple('Center', 'x y')
+    def __init__(self, file_path=None):
+        self.camera = Camera()
+        self.setup_camera()
 
-
-class Vision:
-    """
-    Locate objects on the pitch.
-    """
-
-    def __init__(self, pitch, color, our_side, frame_shape, frame_center, calibration):
-        """
-        Initialize the vision system.
-
-        Params:
-            [int] pitch         pitch number (0 or 1)
-            [string] color      color of our robot
-            [string] our_side   our side
-        """
-        self.pitch = pitch
-        self.color = color
-        self.our_side = our_side
-        self.frame_center = frame_center
-
-        height, width, channels = frame_shape
-
-        # Find the zone division
-        self.zones = zones = self._get_zones(width, height)
-
-        opponent_color = self._get_opponent_color(color)
-
-        if our_side == 'left':
-            self.us = [
-                RobotTracker(
-                    color=color, crop=zones[0], offset=zones[0][0], pitch=pitch,
-                    name='Our Defender', calibration=calibration),   # defender
-                RobotTracker(
-                    color=color, crop=zones[2], offset=zones[2][0], pitch=pitch,
-                    name='Our Attacker', calibration=calibration)   # attacker
-            ]
-
-            self.opponents = [
-                RobotTracker(
-                    color=opponent_color, crop=zones[3], offset=zones[3][0], pitch=pitch,
-                    name='Their Defender', calibration=calibration),
-                RobotTracker(
-                    color=opponent_color, crop=zones[1], offset=zones[1][0], pitch=pitch,
-                    name='Their Attacker', calibration=calibration)
-
-            ]
+        if file_path is None:
+            self.calibrations = get_calibrations()
         else:
-            self.us = [
-                RobotTracker(
-                    color=color, crop=zones[3], offset=zones[3][0], pitch=pitch,
-                    name='Our Defender', calibration=calibration),
-                RobotTracker(
-                    color=color, crop=zones[1], offset=zones[1][0], pitch=pitch,
-                    name='Our Attacker', calibration=calibration)
-            ]
+            self.calibrations = get_calibrations(file_path)
+        # croppings = self.calibrations['croppings']
+        
+        # assert croppings['y2'] - croppings['y1'] == MAX_HEIGHT
+        # assert croppings['x2'] - croppings['x1'] == MAX_WIDTH
 
-            self.opponents = [
-                RobotTracker(
-                    color=opponent_color, crop=zones[0], offset=zones[0][0], pitch=pitch,
-                    name='Their Defender', calibration=calibration),   # defender
-                RobotTracker(
-                    color=opponent_color, crop=zones[2], offset=zones[2][0], pitch=pitch,
-                    name='Their Attacker', calibration=calibration)
-            ]
+    def recognize_ball(self):
+        modified_frame = self.frame
+        ball = self.calibrations['ball']
+        open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ball['morph_open'], ball['morph_open']))
+        close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ball['morph_close'], ball['morph_close']))
 
-        # Set up trackers
-        self.ball_tracker = BallTracker(
-            (0, width, 0, height), 0, pitch, calibration)
+        # Convert the frame to HSV color space.
+        modified_frame = cv2.cvtColor(modified_frame, cv2.COLOR_BGR2HSV)
 
-    def _get_zones(self, width, height):
-        return [(val[0], val[1], 0, height) for val in tools.get_zones(width, height, pitch=self.pitch)]
+        red_mask = cv2.inRange(modified_frame, (ball['hue1_low'], ball['sat_low'], ball['val_low']), (ball['hue1_high'], ball['sat_high'], ball['val_high']))
+        violet_mask = cv2.inRange(modified_frame, (ball['hue2_low'], ball['sat_low'], ball['val_low']), (ball['hue2_high'], ball['sat_high'], ball['val_high']))
+        modified_frame = cv2.bitwise_or(red_mask, violet_mask)
 
-    def _get_opponent_color(self, our_color):
-        return (TEAM_COLORS - set([our_color])).pop()
+        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_CLOSE, open_kernel)
+        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_OPEN, close_kernel)
 
-    def locate(self, frame):
+        contours = cv2.findContours(modified_frame.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+
+        largest_contour = self.get_largest_contour(contours)
+
+        # Ball is not detected
+        if largest_contour is None:
+            print("Ball is not detected!")
+            return 0, None, modified_frame
+
+        center, radius = self.get_contour_center(largest_contour)
+
+        return radius, center, modified_frame
+
+    def get_largest_contour(self, contours):
+        areas = [cv2.contourArea(c) for c in contours]
+        return contours[np.argmax(areas)]
+
+    def recognize_plates(self):
         """
-        Find objects on the pitch using multiprocessing.
+        This is a mess and needs to be redone. The drawing stuff should
+        go into GUI. Probably get four corners coordinates, then draw them
+        there instead of here.
 
-        Returns:
-            [5-tuple] Location of the robots and the ball
+        TODO: compute the angle.
         """
-        # Run trackers as processes
-        positions = self._run_trackers(frame)
-        # Correct for perspective
-        positions = self.get_adjusted_positions(positions)
+        # pink = self.calibrations['pink']
 
-        # Wrap list of positions into a dictionary
-        keys = ['our_defender', 'our_attacker', 'their_defender', 'their_attacker', 'ball']
-        regular_positions = dict()
-        for i, key in enumerate(keys):
-            regular_positions[key] = positions[i]
+        modified_frame = self.frame
+        v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 27, 150, 106, 255, 255, 255
+        modified_frame = cv2.inRange(modified_frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
+        pink_frame =  cv2.inRange(modified_frame, (150, 100, 100), (255, 255, 255))
+        pink_frame = cv2.dilate(pink_frame, None, iterations=1)
+        modified_frame = cv2.bitwise_or(modified_frame, pink_frame)
 
-        # Error check we got a frame
-        height, width, channels = frame.shape if frame is not None else (None, None, None)
+        modified_frame = cv2.GaussianBlur(modified_frame, (15, 15), 0)
+        kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_CLOSE, kernel)
+        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_OPEN, kernel)
+        cv2.imshow("plate detection", modified_frame)
 
-        model_positions = {
-            'our_attacker': self.to_info(positions[1], height),
-            'their_attacker': self.to_info(positions[3], height),
-            'our_defender': self.to_info(positions[0], height),
-            'their_defender': self.to_info(positions[2], height),
-            'ball': self.to_info(positions[4], height)
-        }
+        contours = cv2.findContours(modified_frame.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
 
-        return model_positions, regular_positions
+        contour_index = 0
+        for cnt in contours:
+            print cv2.contourArea(cnt)
+            if cv2.contourArea(cnt) < 500:
+                cnt_index += 1
+                continue
+            # copy the contour part from the image
+            tmp = np.zeros((480,640,3), np.uint8)
+            cv2.drawContours(tmp, contours, cnt_index, (255,255,255), cv2.FILLED);
+            
+            #cv2.imshow('abc' + str(cnt_index), image)
+            #cv2.imshow('adas' + str(cnt_index), tmp)
+            tmp = cv2.bitwise_and(image, tmp)
+            #cv2.imshow('adaasds' + str(cnt_index), tmp)
 
-    def get_adjusted_point(self, point):
+            tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2HSV)
+            #if cnt_index == 2:
+            #    cv2.imshow("this", tmp)
+            # count blue coloured pixels
+            blue_no = count_pixels('blue', tmp)
+            print("blue", blue_no)
+            # count yellow coloured pixels
+            yellow_no = count_pixels('yellow', tmp)
+            print("yellow", yellow_no)
+            # count green coloured pixels
+            green_no = count_pixels('green', tmp)
+            print("green", green_no)
+            # count pink coloured pixels
+            pink_no =  count_pixels('pink', tmp)
+            # pink_no += count_pixels(0, 0, 0, 25, 255, 255, tmp)
+            print("pink", pink_no)
+
+            byr = blue_no / (yellow_no + 1)
+            pgr = pink_no / (green_no + 1)
+            print("blue yellow ratio", byr)
+            print("pink green ratio", pgr)
+
+            # find the mass centre of the single circle (to find angle)
+            if pgr < 1.0:
+                v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 160, 100, 80, 180, 255, 255
+            else:
+                v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 50, 100, 100, 90, 255, 255
+            tmp_mask = cv2.inRange(tmp, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
+            m = cv2.moments(tmp_mask, True)
+            (tx, ty) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
+            print(tx, ty)
+            cv2.circle(image, (tx, ty), 5, (255, 255, 255), -1)
+
+            # find the rotated rectangle around the plate
+            rect = cv2.minAreaRect(cnt)
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            print(box)
+            minx, miny, maxx, maxy = 100000,100000,0,0
+            for (x, y) in box:
+                miny = min(miny, y)
+                minx = min(minx, x)
+                maxy = max(miny, y)
+                maxx = max(minx, x)
+
+            # find the closest corner to the mass centre
+            closest_corner = 0
+            distance = 10000000
+            # cv2.circle(image, (tx, ty), 3, (100, 100, 100), -1)
+            for i in range(4):
+                tmp_dist = (box[i][0] - tx) * (box[i][0] - tx) + (box[i][1] - ty) * (box[i][1] - ty)
+                print(i, tmp_dist)
+                if (tmp_dist < distance):
+                    distance = tmp_dist
+                    closest_corner = i
+            cv2.circle(image, (box[closest_corner][0], box[closest_corner][1]), 5, (100, 100, 255), -1)
+            
+            # find centre
+            m = cv2.moments(cnt, False);
+            (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
+
+            # draw direction line
+            cv2.line(image, (cx, cy), (cx + box[closest_corner][0] - box[(closest_corner - 1) % 4][0], cy + box[closest_corner][1] - box[(closest_corner - 1) % 4][1]),(255, 255, 255), 3)
+
+            cv2.drawContours(image,[box],0,(0,0,255),2)
+            cv2.putText(image, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+            cnt_index += 1
+
+    def count_pixels(type, mask):
+        data = self.calibrations[type]
+        dst = cv2.inRange(mask, (data['hue1_low'], data['sat_low'], data['val_low']), (data['hue1_high'], data['sat_high'], data['val_high']))
+        return cv2.countNonZero(dst)
+
+    def get_world_state(self):
         """
-        Given a point on the plane, calculate the adjusted point, by taking into account
-        the height of the robot, the height of the camera and the distance of the point
-        from the center of the lens.
+        Retrieves all data from vision system.
         """
-        plane_height = 250.0
-        robot_height = 20.0
-        coefficient = robot_height/plane_height
+        data = {'ball': {'center': (0, 0), 'radius': 0}, 'robots': [None, None, None, None]}
 
-        x = point[0]
-        y = point[1]
+        self.frame = self.camera.get_frame()
+        # Maybe crop the frame here?
 
-        dist_x = float(x - self.frame_center[0])
-        dist_y = float(y - self.frame_center[1])
+        ball_mask = None
+        ball_radius, ball_center, ball_mask = self.recognize_ball()
+        print("BALL - x : %d y : %d radius : %d" % (ball_center[0], ball_center[1], ball_radius))
+        data['ball']['radius'] = ball_radius
+        data['ball']['center'] = (ball_center[0], ball_center[1])
 
-        delta_x = dist_x * coefficient
-        delta_y = dist_y * coefficient
+        # Robots recognition code goes here.
+        # Store things into data dictionary.
+        self.recognize_plates()
 
-        return (int(x-delta_x), int(y-delta_y))
+        # Should return data dictionary and the modified frame to the drawing utilities.
+        return data, modified_frame
 
-    def get_adjusted_positions(self, positions):
-        try:
-            for robot in range(4):
-                # Adjust each corner of the plate
-                for i in range(4):
-                    x = positions[robot]['box'][i][0]
-                    y = positions[robot]['box'][i][1]
-                    positions[robot]['box'][i] = self.get_adjusted_point((x, y))
 
-                new_direction = []
-                for i in range(2):
-                    # Adjust front line
-                    x = positions[robot]['front'][i][0]
-                    y = positions[robot]['front'][i][1]
-                    positions[robot]['front'][i] = self.get_adjusted_point((x, y))
+    def setup_camera(self):
+        self.camera.set(cv2.CAP_PROP_BRIGHTNESS, 0.5)
+        self.camera.set(cv2.CAP_PROP_CONTRAST, 0.5)
+        self.camera.set(cv2.CAP_PROP_SATURATION, 0.5)
+        self.camera.set(cv2.CAP_PROP_HUE, 0.5)
 
-                    # Adjust direction line
-                    x = positions[robot]['direction'][i][0]
-                    y = positions[robot]['direction'][i][1]
-                    adj_point = self.get_adjusted_point((x, y))
-                    new_direction.append(adj_point)
+def get_calibrations(file_path=None):
+    if file_path is None:
+        file_path = CALIBRATIONS_FILE_PATH
 
-                # Change the namedtuples used for storing direction points
-                positions[robot]['direction'] = (
-                    Center(new_direction[0][0], new_direction[0][1]),
-                    Center(new_direction[1][0], new_direction[1][1]))
+    file_handler = open(file_path, 'r')
+    file_contents = json.load(file_handler)
+    file_handler.close()
+    return file_contents
 
-                # Adjust the center point of the plate
-                x = positions[robot]['x']
-                y = positions[robot]['y']
-                new_point = self.get_adjusted_point((x, y))
-                positions[robot]['x'] = new_point[0]
-                positions[robot]['y'] = new_point[1]
-        except:
-            # At least one robot has not been found
-            pass
+def dump_calibrations(calibrations, filepath=None):
+    # writes calibrations to file
+    if filepath is None:
+        filepath = CALIBRATIONS_FILE
 
-        return positions
-
-    def _run_trackers(self, frame):
-        """
-        Run trackers as separate processes
-
-        Params:
-            [np.frame] frame        - frame to run trackers on
-
-        Returns:
-            [5-tuple] positions     - locations of the robots and the ball
-        """
-        queues = [Queue() for i in range(5)]
-        objects = [self.us[0], self.us[1], self.opponents[0], self.opponents[1], self.ball_tracker]
-
-        # Define processes
-        processes = [
-            Process(target=obj.find, args=((frame, queues[i]))) for (i, obj) in enumerate(objects)]
-
-        # Start processes
-        for process in processes:
-            process.start()
-
-        # Find robots and ball, use queue to
-        # avoid deadlock and share resources
-        positions = [q.get() for q in queues]
-
-        # terminate processes
-        for process in processes:
-            process.join()
-
-        return positions
-
-    def to_info(self, args, height):
-        """
-        Returns a dictionary with object position information
-        """
-        x, y, angle, velocity = None, None, None, None
-        if args is not None:
-            if 'x' in args and 'y' in args:
-                x = args['x']
-                y = args['y']
-                if y is not None:
-                    y = height - y
-
-            if 'angle' in args:
-                angle = args['angle']
-
-            if 'velocity' in args:
-                velocity = args['velocity']
-
-        return {'x': x, 'y': y, 'angle': angle, 'velocity': velocity}
-
+    file_handle = open(filepath, 'w')
+    json.dump(calibrations, file_handle)
+    file_handle.close()
 
 class Camera(object):
-    """
-    Camera access wrapper.
-    """
 
     def __init__(self, port=0, pitch=0):
         self.capture = cv2.VideoCapture(port)
-        calibration = tools.get_croppings(pitch=pitch)
-        self.crop_values = tools.find_extremes(calibration['outline'])
 
-        # Parameters used to fix radial distortion
+        # Parameters used to fix radial distortion.
         radial_data = tools.get_radial_data()
         self.nc_matrix = radial_data['new_camera_matrix']
         self.c_matrix = radial_data['camera_matrix']
         self.dist = radial_data['dist']
 
     def get_frame(self):
-        """
-        Retrieve a frame from the camera.
-
-        Returns the frame if available, otherwise returns None.
-        """
-        # status, frame = True, cv2.imread('img/i_all/00000003.jpg')
         status, frame = self.capture.read()
-        frame = self.fix_radial_distortion(frame)
+        frame = self.fix_radial_distortion()
         if status:
-            return frame[
-                self.crop_values[2]:self.crop_values[3],
-                self.crop_values[0]:self.crop_values[1]
-            ]
+            return frame
 
     def fix_radial_distortion(self, frame):
         return cv2.undistort(
             frame, self.c_matrix, self.dist, None, self.nc_matrix)
 
-    def get_adjusted_center(self, frame):
-        return (320-self.crop_values[0], 240-self.crop_values[2])
-
-
 class GUI(object):
 
-    VISION = 'SUCH VISION'
-    BG_SUB = 'BG Subtract'
-    NORMALIZE = 'Normalize  '
-    COMMS = 'Communications on/off '
+    # window names
+    MW_NAME = "Robot Vision"
+    DEMO_NAME = "Object recognition window"
+    CALIBRATIONS = 'CALIBRATIONS'
 
-    def nothing(self, x):
-        pass
+    # trackbar names
+    TB_HUE_HIGH = 'Hue High'
+    TB_HUE_LOW = 'Hue Low'
+    TB_SAT_HIGH = 'Sat High'
+    TB_SAT_LOW = 'Sat Low'
+    TB_VAL_HIGH = 'Val High'
+    TB_VAL_LOW = 'Val Low'
+    
+    # member attributes
 
-    def __init__(self, calibration, arduino, pitch):
-        self.zones = None
-        self.calibration_gui = CalibrationGUI(calibration)
-        self.arduino = arduino
-        self.pitch = pitch
+    frame = None
+    modified_frame = None
+    calibrations = None
 
-        cv2.namedWindow(self.VISION)
+    def __init__(self, calibrations):
+        # def update_calibrations(inp):
+        #     c_robot = calibrations['robots']
+        #     c_robot['hue_high'] = cv2.getTrackbarPos(self.TB_HUE_HIGH, self.CALIBRATIONS)
+        #     c_robot['hue_low'] = cv2.getTrackbarPos(self.TB_HUE_LOW, self.CALIBRATIONS)
+        #     c_robot['sat_high'] = cv2.getTrackbarPos(self.TB_SAT_HIGH, self.CALIBRATIONS)
+        #     c_robot['sat_low'] = cv2.getTrackbarPos(self.TB_SAT_LOW, self.CALIBRATIONS)
+        #     c_robot['val_high'] = cv2.getTrackbarPos(self.TB_VAL_HIGH, self.CALIBRATIONS)
+        #     c_robot['val_low'] = cv2.getTrackbarPos(self.TB_VAL_LOW, self.CALIBRATIONS)
 
-        cv2.createTrackbar(self.BG_SUB, self.VISION, 0, 1, self.nothing)
-        cv2.createTrackbar(self.NORMALIZE, self.VISION, 0, 1, self.nothing)
-        cv2.createTrackbar(
-            self.COMMS, self.VISION, self.arduino.comms, 1, lambda x:  self.arduino.setComms(x))
+        self.calibrations = calibrations
+        cv2.namedWindow(self.MW_NAME)
+        cv2.moveWindow(self.MW_NAME, 320, 300)
+        cv2.namedWindow(self.DEMO_NAME)
+        cv2.moveWindow(self.DEMO_NAME, 320, 0)
+        cv2.namedWindow(self.CALIBRATIONS, cv2.WINDOW_NORMAL)
+        cv2.moveWindow(self.CALIBRATIONS, 852, 0)
 
-    def to_info(self, args):
-        """
-        Convert a tuple into a vector
+        # c_robot = calibrations['robots']
 
-        Return a Vector
-        """
-        x, y, angle, velocity = None, None, None, None
-        if args is not None:
-            if 'location' in args:
-                x = args['location'][0] if args['location'] is not None else None
-                y = args['location'][1] if args['location'] is not None else None
+        # cv2.createTrackbar(self.TB_HUE_LOW, self.CALIBRATIONS, c_robot['hue_low'], 90, update_calibrations)
+        # cv2.createTrackbar(self.TB_HUE_HIGH, self.CALIBRATIONS, c_robot['hue_high'], 90, update_calibrations)
+        # cv2.createTrackbar(self.TB_SAT_LOW, self.CALIBRATIONS, c_robot['sat_low'], 255, update_calibrations)
+        # cv2.createTrackbar(self.TB_SAT_HIGH, self.CALIBRATIONS, c_robot['sat_high'], 255, update_calibrations)
+        # cv2.createTrackbar(self.TB_VAL_LOW, self.CALIBRATIONS, c_robot['val_low'], 255, update_calibrations)
+        # cv2.createTrackbar(self.TB_VAL_HIGH, self.CALIBRATIONS, c_robot['val_high'], 255, update_calibrations)
 
-            elif 'x' in args and 'y' in args:
-                x = args['x']
-                y = args['y']
+    def update(self, delta_t, frame, modified_frame, data):
+        self.frame = frame
+        self.modified_frame = modified_frame
 
-            if 'angle' in args:
-                angle = args['angle']
+        # self.draw_angles(data)
+        self.draw_ball(frame, data)
+        self.draw_ball_text(data)
+        # self.draw_robots_text(data)
+        # self.draw_pitch()
+        # self.draw_separating_lines()
+        self.draw_fps(delta_t)
+        # self.draw_crops()
 
-            if 'velocity' in args:
-                velocity = args['velocity']
+        cv2.imshow(self.MW_NAME, self.frame)
+        # draw the processed image
+        cv2.imshow(self.DEMO_NAME, self.modified_frame)
 
-        return {'x': x, 'y': y, 'angle': angle, 'velocity': velocity}
+    def draw_ball(self, frame, data):
+        if not data:
+            pass
 
-    def cast_binary(self, x):
-        return x == 1
+        center = data['ball']['center']
+        if center is None:
+            print("The ball center was not detected.")
+            return
 
-    def draw(self, frame, model_positions, actions, regular_positions, fps,
-             aState, dState, a_action, d_action, grabbers, our_color, our_side,
-             key=None, preprocess=None):
-        """
-        Draw information onto the GUI given positions from the vision and post processing.
+        if center[0] and center[1]:
+            x = center[0]
+            y = center[1]
+            radius = data['ball']['radius']
+            cv2.circle(frame, (int(x), int(y)), int(radius + 3), (0, 0, 0), -1)
 
-        NOTE: model_positions contains coordinates with y coordinate reversed!
-        """
-        # Get general information about the frame
-        frame_height, frame_width, channels = frame.shape
+    def draw_ball_text(self, data):
+        center = data['ball']['center']
+        x = center[0]
+        y = center[1]
+        cv2.putText("Ball: x: %d, y: %d" % (x, y), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
 
-        # Draw the calibration gui
-        self.calibration_gui.show(frame, key)
-        # Draw dividors for the zones
-        self.draw_zones(frame, frame_width, frame_height)
-
-        their_color = list(TEAM_COLORS - set([our_color]))[0]
-
-        key_color_pairs = zip(
-            ['our_defender', 'their_defender', 'our_attacker', 'their_attacker'],
-            [our_color, their_color]*2)
-
-        self.draw_ball(frame, regular_positions['ball'])
-
-        for key, color in key_color_pairs:
-            self.draw_robot(frame, regular_positions[key], color)
-
-        # Draw fps on the canvas
-        if fps is not None:
-            self.draw_text(frame, 'FPS: %.1f' % fps, 0, 10, BGR_COMMON['green'], 1)
-
-        if preprocess is not None:
-            preprocess['normalize'] = self.cast_binary(
-                cv2.getTrackbarPos(self.NORMALIZE, self.VISION))
-            preprocess['background_sub'] = self.cast_binary(
-                cv2.getTrackbarPos(self.BG_SUB, self.VISION))
-
-        if grabbers:
-            self.draw_grabbers(frame, grabbers, frame_height)
-
-        # Extend image downwards and draw states.
-        blank = np.zeros_like(frame)[:200, :, :]
-        frame_with_blank = np.vstack((frame, blank))
-        self.draw_states(frame_with_blank, aState, dState, (frame_width, frame_height))
-
-        if model_positions and regular_positions:
-            for key in ['ball', 'our_defender', 'our_attacker', 'their_defender', 'their_attacker']:
-                if model_positions[key] and regular_positions[key]:
-                    self.data_text(
-                        frame_with_blank, (frame_width, frame_height), our_side, key,
-                        model_positions[key].x, model_positions[key].y,
-                        model_positions[key].angle, model_positions[key].velocity, a_action, d_action)
-                    self.draw_velocity(
-                        frame_with_blank, (frame_width, frame_height),
-                        model_positions[key].x, model_positions[key].y,
-                        model_positions[key].angle, model_positions[key].velocity)
-
-        # Draw center of uncroppped frame (test code)
-        # cv2.circle(frame_with_blank, (266,147), 1, BGR_COMMON['black'], 1)
-
-        cv2.imshow(self.VISION, frame_with_blank)
-
-    def draw_zones(self, frame, width, height):
-        # Re-initialize zones in case they have not been initalized
-        if self.zones is None:
-            self.zones = tools.get_zones(width, height, pitch=self.pitch)
-
-        for zone in self.zones:
-            cv2.line(frame, (zone[1], 0), (zone[1], height), BGR_COMMON['orange'], 1)
-
-    def draw_ball(self, frame, position_dict):
-        if position_dict and position_dict['x'] and position_dict['y']:
-            frame_height, frame_width, _ = frame.shape
-            self.draw_line(
-                frame, ((int(position_dict['x']), 0), (int(position_dict['x']), frame_height)), 1)
-            self.draw_line(
-                frame, ((0, int(position_dict['y'])), (frame_width, int(position_dict['y']))), 1)
-
-    def draw_dot(self, frame, location):
-        if location is not None:
-            cv2.circle(frame, location, 2, BGR_COMMON['white'], 1)
-
-    def draw_robot(self, frame, position_dict, color):
-        if position_dict['box']:
-            cv2.polylines(frame, [np.array(position_dict['box'])], True, BGR_COMMON[color], 2)
-
-        if position_dict['front']:
-            p1 = (position_dict['front'][0][0], position_dict['front'][0][1])
-            p2 = (position_dict['front'][1][0], position_dict['front'][1][1])
-            cv2.circle(frame, p1, 3, BGR_COMMON['white'], -1)
-            cv2.circle(frame, p2, 3, BGR_COMMON['white'], -1)
-            cv2.line(frame, p1, p2, BGR_COMMON['red'], 2)
-
-        if position_dict['dot']:
-            cv2.circle(
-                frame, (int(position_dict['dot'][0]), int(position_dict['dot'][1])),
-                4, BGR_COMMON['black'], -1)
-
-        if position_dict['direction']:
-            cv2.line(
-                frame, position_dict['direction'][0], position_dict['direction'][1],
-                BGR_COMMON['orange'], 2)
-
-    def draw_line(self, frame, points, thickness=2):
-        if points is not None:
-            cv2.line(frame, points[0], points[1], BGR_COMMON['red'], thickness)
-
-    def data_text(self, frame, frame_offset, our_side, text, x, y, angle, velocity, a_action, d_action):
-
-        if x is not None and y is not None:
-            frame_width, frame_height = frame_offset
-            if text == "ball":
-                y_offset = frame_height + 130
-                draw_x = 30
-            else:
-                x_main = lambda zz: (frame_width/4)*zz
-                x_offset = 30
-                y_offset = frame_height+20
-
-                if text == "our_defender":
-                    draw_x = x_main(0) + x_offset
-                elif text == "our_attacker":
-                    draw_x = x_main(2) + x_offset
-                elif text == "their_defender":
-                    draw_x = x_main(3) + x_offset
-                else:
-                    draw_x = x_main(1) + x_offset
-
-                if our_side == "right":
-                    draw_x = frame_width-draw_x - 80
-
-            self.draw_text(frame, text, draw_x, y_offset)
-            self.draw_text(frame, 'x: %.2f' % x, draw_x, y_offset + 10)
-            self.draw_text(frame, 'y: %.2f' % y, draw_x, y_offset + 20)
-
-            if angle is not None:
-                self.draw_text(frame, 'angle: %.2f' % angle, draw_x, y_offset + 30)
-
-            if velocity is not None:
-                self.draw_text(frame, 'velocity: %.2f' % velocity, draw_x, y_offset + 40)
-        if text == 'our_attacker':
-            self.draw_actions(frame, a_action, draw_x, y_offset+50)
-        elif text == 'our_defender':
-            self.draw_actions(frame, d_action, draw_x, y_offset+50)
-
-    def draw_text(self, frame, text, x, y, color=BGR_COMMON['green'], thickness=1.3, size=0.3,):
-        if x is not None and y is not None:
-            cv2.putText(
-                frame, text, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, size, color, thickness)
-
-    def draw_grabbers(self, frame, grabbers, height):
-        def_grabber = grabbers['our_defender'][0]
-        att_grabber = grabbers['our_attacker'][0]
-
-        def_grabber = [(x, height - y) for x, y in def_grabber]
-        att_grabber = [(x, height - y) for x, y in att_grabber]
-
-        def_grabber = [(int(x) if x > -1 else 0, int(y) if y > -1 else 0) for x, y in def_grabber]
-        att_grabber = [(int(x) if x > -1 else 0, int(y) if y > -1 else 0) for x, y in att_grabber]
-
-        def_grabber[2], def_grabber[3] = def_grabber[3], def_grabber[2]
-        att_grabber[2], att_grabber[3] = att_grabber[3], att_grabber[2]
-
-        cv2.polylines(frame, [np.array(def_grabber)], True, BGR_COMMON['red'], 1)
-        cv2.polylines(frame, [np.array(att_grabber)], True, BGR_COMMON['red'], 1)
-
-    def draw_velocity(self, frame, frame_offset, x, y, angle, vel, scale=10):
-        if not(None in [frame, x, y, angle, vel]) and vel is not 0:
-            frame_width, frame_height = frame_offset
-            r = vel*scale
-            y = frame_height - y
-            start_point = (x, y)
-            end_point = (x + r * np.cos(angle), y - r * np.sin(angle))
-            self.draw_line(frame, (start_point, end_point))
-
-    def draw_states(self, frame, aState, dState, frame_offset):
-        frame_width, frame_height = frame_offset
-        x_main = lambda zz: (frame_width/4)*zz
-        x_offset = 20
-        y_offset = frame_height+140
-
-        self.draw_text(frame, "Attacker State:", x_main(1) - x_offset, y_offset, size=0.6)
-        self.draw_text(frame, aState[0], x_main(1) - x_offset, y_offset + 15, size=0.6)
-        self.draw_text(frame, aState[1], x_main(1) - x_offset, y_offset + 30, size=0.6)
-
-        self.draw_text(frame, "Defender State:", x_main(2) + x_offset, y_offset, size=0.6)
-        self.draw_text(frame, dState[0], x_main(2) + x_offset, y_offset + 15, size=0.6)
-        self.draw_text(frame, dState[1], x_main(2)+x_offset, y_offset + 30, size=0.6)
-
-    def draw_actions(self, frame, action, x, y):
-        self.draw_text(
-            frame, "Left Motor: " + str(action['left_motor']), x, y+5, color=BGR_COMMON['white'])
-        self.draw_text(
-            frame, "Right Motor: " + str(action['right_motor']), x, y+15, color=BGR_COMMON['white'])
-        self.draw_text(
-            frame, "Speed: " + str(action['speed']), x, y + 25, color=BGR_COMMON['white'])
-        self.draw_text(frame, "Kicker: " + str(action['kicker']), x, y + 35, color=BGR_COMMON['white'])
-        self.draw_text(frame, "Catcher: " + str(action['catcher']), x, y + 45, color=BGR_COMMON['white'])
+    def draw_fps(self, delta_t):
+        self.draw_text("FPS: " + str(1 / delta_t), 20, 20)
