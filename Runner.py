@@ -1,4 +1,4 @@
-from milestone2.models import World
+from milestone2.models import World, Task
 from postprocessing import PostProcessing
 from vision.vision import Vision, GUI
 from vision.vision import dump_calibrations
@@ -71,11 +71,11 @@ class Runner(object):
                 # Execute the given task requested
                 if self.world.our_robot.is_busy is False:
                     if task is 'move_to_ball':
-                        self.world.our_robot.tasks.move_to_ball(ball_vector)
+                        self.world.task.move_to_ball(ball_vector)
                     if task is 'kick_ball_in_goal':
-                        self.world.our_robot.tasks.kick_ball_in_goal()
+                        self.world.task.kick_ball_in_goal()
                     if task is 'move_and_grab_ball':
-                        self.world.our_robot.tasks.move_and_grab_ball()
+                        self.world.task.move_and_grab_ball()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):

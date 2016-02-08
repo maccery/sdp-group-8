@@ -156,7 +156,6 @@ class Robot(PitchObject):
         super(Robot, self).__init__(x, y, ROBOT_WIDTH, ROBOT_LENGTH, ROBOT_HEIGHT, angle)
         self._catcher = 'open'
         self._is_busy = False
-        self._tasks = Task(self)
 
     @property
     def catcher_area(self):
@@ -313,15 +312,20 @@ class World(object):
         self._pitch = Pitch(pitch_num)
         self._ball = Ball(0, 0, 0, 0)
         self._our_robot = Robot(0, 0, 0, 0)
+        self._task = Task(self)
 
     @property
     def pitch(self):
-        return self.pitch
+        return self._pitch
 
     @property
     def ball(self):
-        return self.ball
+        return self._ball
 
     @property
     def our_robot(self):
-        return self.our_robot
+        return self._our_robot
+
+    @property
+    def task(self):
+        return self._task
