@@ -63,20 +63,9 @@ class Runner(object):
                 # update the gui
                 self.gui.update(delta_time, self.vision.frame, modified_frame, data)
 
-                # uncomment to see the format vision data is returned
-                # print data, '\n'
-
-                # model_positions, regular_positions = self.get_positions(frame, pre_options)
-                # self.world.update_positions(data)
-
-                # if self.robot.ready:
-                    # skip -= 1
-
-                # if self.robot.ready and skip <= 0:
-                #     # The robot is ready to accept a new command
-                #     end = self.planner.plan()
-                    
-                #     skip = 1
+                # Process the data from the frame
+                model_positions, regular_positions = self.get_positions(frame, pre_options)
+                self.world.update_positions(data)
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):

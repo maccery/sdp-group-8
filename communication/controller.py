@@ -249,6 +249,10 @@ class Communication(Arduino):
         self.run_motor(3, -0.5, 500)
         return 0.4
 
+    def open_grabber(self):
+
+    def close_grabber(self):
+
     def move_distance(self, y=None, power=1):
         """
         Moves robot for a given distance on a given axis.

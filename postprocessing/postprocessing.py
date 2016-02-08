@@ -4,6 +4,9 @@ from math import atan2, pi, hypot
 
 
 class Postprocessing(object):
+    """
+    This class analyses the frame given by the vision feed and creates vectors to represent the world
+    """
 
     def __init__(self):
         self._vectors = {}
@@ -15,9 +18,12 @@ class Postprocessing(object):
         self._time = 0
 
     def analyze(self, vector_dict):
-        '''
+        """
         This method analyzes current positions and previous object vector.
-        '''
+        :param vector_dict:
+        :return:
+        """
+
         self._time += 1
         new_vector_dict = {}
         for name, info in vector_dict.iteritems():
@@ -28,9 +34,10 @@ class Postprocessing(object):
         return new_vector_dict
 
     def analyze_ball(self, info):
-        '''
+        """
         This method calculates the angle and the velocity of the ball.
-        '''
+        """
+
         if not(info['x'] is None) and not (info['y'] is None):
             delta_x = info['x'] - self._vectors['ball']['vec'].x
             delta_y = info['y'] - self._vectors['ball']['vec'].y
@@ -43,9 +50,9 @@ class Postprocessing(object):
             return deepcopy(self._vectors['ball']['vec'])
 
     def analyze_robot(self, key, info):
-        '''
+        """
         This method calculates the angle and the velocity of the robot.
-        '''
+        """
         if not(info['x'] is None) and not(info['y'] is None) and not(info['angle'] is None):
 
             robot_angle = info['angle']
@@ -66,6 +73,7 @@ class Postprocessing(object):
 
             self._vectors[key]['vec'] = Vector(info['x'], info['y'], info['angle'], velocity)
             self._vectors[key]['time'] = self._time
+
             return Vector(info['x'], info['y'], info['angle'], velocity)
         else:
             return deepcopy(self._vectors[key]['vec'])
