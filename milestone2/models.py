@@ -20,7 +20,7 @@ GOAL_HEIGHT = 10
 
 class Coordinate(object):
     def __init__(self, x, y):
-        if x == None or y == None:
+        if x is None or y is None:
             raise ValueError('Can not initialize to attributes to None')
         else:
             self._x = x
@@ -52,18 +52,45 @@ class Coordinate(object):
         return 'x: %s, y: %s\n' % (self._x, self._y)
 
 
+class Vector(Coordinate):
+    def __init__(self, x, y, angle):
+        super(Vector, self).__init__(x, y)
+        if angle is None or angle < 0 or angle >= (2 * pi):
+            raise ValueError('Can not initialise attributes of Vector to None')
+        else:
+            self._angle = angle
+
+    @property
+    def angle(self):
+        return self._angle
+
+    @angle.setter
+    def angle(self, new_angle):
+        if new_angle == None or new_angle < 0 or new_angle >= (2 * pi):
+            raise ValueError('Angle can not be None, also must be between 0 and 2pi')
+        self._angle = new_angle
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and (self.__dict__ == other.__dict__))
+
+    def __repr__(self):
+        return ('x: %s, y: %s, angle: %s\n' %
+                (self.x, self.y, self._angle))
+
+
 class PitchObject(object):
     """
     Abstract class for describing objects on the pitch
     """
 
-    def __init__(self, x, y, width, length, height):
+    def __init__(self, x, y, width, length, height, angle):
         if width < 0 or length < 0 or height < 0:
             raise ValueError('Object dimensions must be positive')
         else:
             self._width = width
             self._length = length
             self._height = height
+            self._vector = Vector(x, y, angle)
 
     @property
     def width(self):
@@ -85,13 +112,28 @@ class PitchObject(object):
     def y(self):
         return self._vector.y
 
+    @property
+    def angle(self):
+        return self._vector.angle
+
+    @property
+    def x(self):
+        return self._vector.x
+
+    @property
+    def y(self):
+        return self._vector.y
+
+    @property
+    def vector(self):
+        return self._vector
+
     @vector.setter
     def vector(self, new_vector):
-        if new_vector == None or not isinstance(new_vector, Vector):
+        if new_vector is None or not isinstance(new_vector, Vector):
             raise ValueError('The new vector can not be None and must be an instance of a Vector')
         else:
-            self._vector = Vector(new_vector.x, new_vector.y, new_vector.angle - self._angle_offset,
-                                  new_vector.velocity)
+            self._vector = Vector(new_vector.x, new_vector.y, new_vector.angle)
 
     def get_generic_polygon(self, width, length):
         '''
@@ -108,9 +150,9 @@ class PitchObject(object):
 
 
 class Robot(PitchObject):
-    def __init__(self, zone, x, y, angle, velocity, width=ROBOT_WIDTH, length=ROBOT_LENGTH, height=ROBOT_HEIGHT):
+    def __init__(self, zone, x, y, angle, width=ROBOT_WIDTH, length=ROBOT_LENGTH, height=ROBOT_HEIGHT):
         # Inherit the super class (PitchObjects) initialiser code
-        super(Robot, self).__init__(x, y, angle, velocity, width, length, height)
+        super(Robot, self).__init__(x, y, width, length, height, angle)
         self._catcher = 'open'
 
     @property
@@ -127,6 +169,7 @@ class Robot(PitchObject):
         back_right = (self.x + self._catcher_area['front_offset'], self.y - self._catcher_area['width'] / 2.0)
         area = Polygon((front_left, front_right, back_left, back_right))
         area.rotate(self.angle, self.x, self.y)
+
         return area
 
     @catcher_area.setter
@@ -155,13 +198,16 @@ class Robot(PitchObject):
         '''
         return (self._catcher == 'closed') and self.can_catch_ball(ball)
 
-    def get_rotation_to_point(self, x, y):
-        '''
-        This method returns an angle by which the robot needs to rotate to achieve alignment.
-        It takes either an x, y coordinate of the object that we want to rotate to
-        '''
-        delta_x = x - self.x
-        delta_y = y - self.y
+    def get_rotation_to_point(self, target_coordinates):
+        """
+        Calculates the rotation required to achieve alignment with given co-ordinates
+
+        :param target_coordinates:
+        :return: angle
+        """
+
+        delta_x = target_coordinates.vector.x - self.x
+        delta_y = target_coordinates.vector.y - self.y
         displacement = hypot(delta_x, delta_y)
         if displacement == 0:
             theta = 0
@@ -172,38 +218,22 @@ class Robot(PitchObject):
             elif theta < -pi:
                 theta += 2 * pi
         assert -pi <= theta <= pi
+
         return theta
 
-    def get_displacement_to_point(self, x, y):
-        '''
-        This method returns the displacement between the robot and the (x, y) coordinate.
-        '''
-        delta_x = x - self.x
-        delta_y = y - self.y
+    def get_displacement_to_point(self, target_coordinates):
+        """
+        Uses the euclidean distance to calculate the displacement between this robot and a target co-ordinates
+
+        :param target_coordinates:
+        :return: displacement
+        """
+
+        delta_x = target_coordinates.vector.x - self.x
+        delta_y = target_coordinates.vector.y - self.y
         displacement = hypot(delta_x, delta_y)
+
         return displacement
-
-    def get_direction_to_point(self, x, y):
-        '''
-        This method returns the displacement and angle to coordinate x, y.
-        '''
-        return self.get_displacement_to_point(x, y), self.get_rotation_to_point(x, y)
-
-    def get_pass_path(self, target):
-        '''
-        Gets a path represented by a Polygon for the area for passing ball between two robots
-        '''
-        robot_poly = self.get_polygon()
-        target_poly = target.get_polygon()
-        return Polygon(robot_poly[0], robot_poly[1], target_poly[0], target_poly[1])
-
-    def update_position(self, pos_dict):
-
-
-    def __repr__(self):
-        return ('zone: %s\nx: %s\ny: %s\nangle: %s\nvelocity: %s\ndimensions: %s\n' %
-                (self._zone, self.x, self.y,
-                 self.angle, self.velocity, (self.width, self.length, self.height)))
 
 
 class Ball(PitchObject):

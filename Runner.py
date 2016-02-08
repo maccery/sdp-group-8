@@ -37,7 +37,7 @@ class Runner(object):
         # Set up GUI
         self.color = color
 
-    def run(self):
+    def run(self, task):
         """
         Ready your sword, here be dragons.
         """
@@ -61,12 +61,15 @@ class Runner(object):
                 self.gui.update(delta_time, self.vision.frame, modified_frame, data)
 
                 # Recgonise the ball and our robot; note these functions don't currently return vectors....
-                ball = self.vision.recognize_ball()
-                our_robot = self.vision.recognize_plates()
+                ball_vector = self.vision.recognize_ball()
+                our_robot_vector = self.vision.recognize_plates()
 
-                # Update the position of our ball and our robot in the world
-                self.world.ball.vector = ball
-                self.world.our_robot.vector = our_robot
+                # Update the vector of our ball and our robot in the world; vector describes position, size, velocity...
+                self.world.ball.vector = ball_vector
+                self.world.our_robot.vector = our_robot_vector
+
+                if task is 'move_and_grab':
+
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
