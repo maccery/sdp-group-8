@@ -34,9 +34,6 @@ class Runner(object):
         # Set up post-processing
         self.postprocessing = PostProcessing()
 
-        # Set up task execution
-        self.tasks = Tasks()
-
         # Set up GUI
         self.color = color
 
@@ -72,11 +69,11 @@ class Runner(object):
                 self.world.our_robot.vector = our_robot_vector
 
                 # Execute the given task requested
-                if task is 'move_to_ball':
-                    # Only execute this task if it's not currently doing another task
-                    if self.world.our_robot.is_busy is False:
+                if self.world.our_robot.is_busy is False:
+                    if task is 'move_to_ball':
                         self.world.our_robot.tasks.move_to_ball(ball_vector)
-
+                    if task is 'kick_ball_in_goal':
+                        self.world.our_robot.tasks.kick_ball_in_goal()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):

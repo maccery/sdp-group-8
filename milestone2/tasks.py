@@ -14,35 +14,46 @@ class Task:
 
     def move_to_ball(self, target_vector):
         # The list of subtasks we need to execute to complete this big task
-        task_list = [self.subtasks.rotate_to_alignment(target_vector),
-                     self.subtasks.move_to_coordinates(target_vector)]
+        subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
+                        self.subtasks.move_to_coordinates(target_vector)]
 
+        self.execute_tasks(subtask_list)
+
+    def kick_ball_in_goal(self, goal_vector):
+        target_vector = goal_vector
+
+        # Turn and face the goal, then kick the ball
+        subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
+                        self.subtasks.kick_ball()]
+
+        self.execute_tasks(subtask_list)
+
+    def execute_tasks(self, subtask_list):
         # Update the robot to state we're actually doing a task and busy
         self.robot.is_busy = True
 
         # Go through our task list, waiting for each task to complete before moving onto next task
-        for task in task_list:
-            task()
+        for subtask in subtask_list:
+            subtask()
 
         # Update the robot to non-busy status
         self.robot.is_busy = False
 
 
 class Subtasks:
-    """
-    Given a specific task; it will try and make the robot complete these
-    """
-
     def __init__(self, robot):
         self.communicate = Communication()
         self.robot = robot
+
+    """
+    Subtasks are one specific thing, such as 'kick', that is communicated to the Arduino
+    """
 
     def move_to_coordinates(self, target_vector):
         """
         Given a specific robot, it will try and move this robot to a given co-ordinate, assuming it is facing the correct way
         already
-        :param robot
-        :param move_to_cordinates
+        :param target_vector
         """
 
         # Calculate how long we need to run the motor for
@@ -55,14 +66,11 @@ class Subtasks:
         # Wait until this task has completed
         time.sleep(calculated_duration)
 
-        return True
-
     def rotate_to_alignment(self, target_vector):
         """
         Given a specific robot, it will rotate to face a specific angle
 
-        :param robot:
-        :param rotate_to_angle:
+        :param target_vector:
         """
 
         angle_to_rotate = self.robot.get_rotation_to_point(target_vector)
@@ -70,7 +78,13 @@ class Subtasks:
 
         time.sleep(wait_time)
 
-        return True
+    def kick_ball(self):
+        """
+        This robot is told to kick
+        """
+        wait_time = self.communicate.kick()
+
+        time.sleep(wait_time)
 
     @staticmethod
     def calculate_motor_duration(distance):
