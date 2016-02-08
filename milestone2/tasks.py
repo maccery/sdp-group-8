@@ -3,19 +3,34 @@ from communication.controller import Communication
 import time
 
 
-class Task:
-    def __init__(self, robot):
-        self.subtasks = Subtasks(robot=robot)
-        self.robot = robot
+class Task(object):
+    def __init__(self, world):
+        self._subtasks = Subtasks(world)
+        self._world = world
+
+    @property
+    def world(self):
+        return self._world
+
+    @world.setter
+    def world(self, world):
+        self._world = world
 
     """
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
-    def move_to_ball(self, target_vector):
+    def move_to_ball(self, ball_vector):
         # The list of subtasks we need to execute to complete this big task
-        subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
-                        self.subtasks.move_to_coordinates(target_vector)]
+        subtask_list = [self._subtasks.rotate_to_alignment(ball_vector),
+                        self._subtasks.move_to_coordinates(ball_vector)]
+
+        self.execute_tasks(subtask_list)
+
+    def move_and_grab_ball(self, ball_vector):
+        subtask_list = [self._subtasks.rotate_to_alignment(ball_vector),
+                        self._subtasks.grab_ball(),
+                        self._subtasks.move_to_coordinates(ball_vector)]
 
         self.execute_tasks(subtask_list)
 
@@ -23,27 +38,32 @@ class Task:
         target_vector = goal_vector
 
         # Turn and face the goal, then kick the ball
-        subtask_list = [self.subtasks.rotate_to_alignment(target_vector),
-                        self.subtasks.kick_ball()]
+        subtask_list = [self._subtasks.rotate_to_alignment(target_vector),
+                        self._subtasks.ungrab_ball(),
+                        self._subtasks.kick_ball()]
 
         self.execute_tasks(subtask_list)
 
     def execute_tasks(self, subtask_list):
         # Update the robot to state we're actually doing a task and busy
-        self.robot.is_busy = True
+        self._world.our_robot.is_busy = True
 
         # Go through our task list, waiting for each task to complete before moving onto next task
         for subtask in subtask_list:
-            subtask()
+            subtask_complete = subtask()
+
+            # if the subtask isn't complete, don't move onto the next task
+            if subtask_complete is False:
+                exit()
 
         # Update the robot to non-busy status
-        self.robot.is_busy = False
+        self._world.our_robot.is_busy = False
 
 
-class Subtasks:
-    def __init__(self, robot):
-        self.communicate = Communication()
-        self.robot = robot
+class Subtasks(object):
+    def __init__(self, world):
+        self._communicate = Communication()
+        self._world = world
 
     """
     Subtasks are one specific thing, such as 'kick', that is communicated to the Arduino
@@ -57,14 +77,19 @@ class Subtasks:
         """
 
         # Calculate how long we need to run the motor for
-        distance = self.robot.get_displacement_to_point(target_vector)
-        calculated_duration = self.calculate_motor_duration(distance)
+        distance = self._world.our_robot.get_displacement_to_point(target_vector)
 
-        # Tell arduino to move for the duration we've calculated
-        self.communicate.move_duration(calculated_duration)
+        if distance < 10:
+            return True
+        else:
+            calculated_duration = self.calculate_motor_duration(distance)
 
-        # Wait until this task has completed
-        time.sleep(calculated_duration)
+            # Tell arduino to move for the duration we've calculated
+            self._communicate.move_duration(calculated_duration)
+
+            # Wait until this task has completed
+            time.sleep(calculated_duration)
+            return False
 
     def rotate_to_alignment(self, target_vector):
         """
@@ -73,25 +98,47 @@ class Subtasks:
         :param target_vector:
         """
 
-        angle_to_rotate = self.robot.get_rotation_to_point(target_vector)
-        wait_time = self.communicate.turn_clockwise(angle_to_rotate)
+        angle_to_rotate = self._world.get_rotation_to_point(target_vector)
 
+        # If the angle of rotation is less than 15 degrees, leave it how it is
+        if angle_to_rotate <= 15:
+            return True
+        else:
+            duration = self.calculate_motor_duration_turn(angle_to_rotate)
+            wait_time = self._communicate.turn(duration)
+            time.sleep(wait_time)
+
+    def ungrab_ball(self):
+        wait_time = self._communicate.ungrab()
         time.sleep(wait_time)
+        return True
+
+    def grab_ball(self):
+        wait_time = self._communicate.grab()
+        time.sleep(wait_time)
+        return True
 
     def kick_ball(self):
-        """
-        This robot is told to kick
-        """
-        wait_time = self.communicate.kick()
-
+        wait_time = self._communicate.kick()
         time.sleep(wait_time)
+        return True
+
+    @staticmethod
+    def calculate_motor_duration_turn(angle_to_rotate):
+        """
+        :param angle_to_rotate: given in degrees
+        """
+        # crude angle -> duration conversion
+        duration = angle_to_rotate * 0.5
+        return duration
 
     @staticmethod
     def calculate_motor_duration(distance):
         """
         Given a distance to travel, we need to know how long to run the motor for
-        :param distance:
+        :param distance: provided in metres
         """
 
-        # Crudely return 500ms until we have better shit
-        return 500
+        # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
+        duration = 100 + (distance * 10)
+        return duration

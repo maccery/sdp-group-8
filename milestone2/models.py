@@ -151,12 +151,11 @@ class PitchObject(object):
 
 
 class Robot(PitchObject):
-    def __init__(self, zone, x, y, angle, width=ROBOT_WIDTH, length=ROBOT_LENGTH, height=ROBOT_HEIGHT):
+    def __init__(self, zone, x, y, angle):
         # Inherit the super class (PitchObjects) initialiser code
-        super(Robot, self).__init__(x, y, width, length, height, angle)
+        super(Robot, self).__init__(x, y, ROBOT_WIDTH, ROBOT_LENGTH, ROBOT_HEIGHT, angle)
         self._catcher = 'open'
         self._is_busy = False
-        self._tasks = Task(self)
 
     @property
     def catcher_area(self):
@@ -249,7 +248,7 @@ class Robot(PitchObject):
 
 class Ball(PitchObject):
     def __init__(self, x, y, angle, velocity):
-        super(Ball, self).__init__(x, y, angle, velocity, BALL_WIDTH, BALL_LENGTH, BALL_HEIGHT)
+        super(Ball, self).__init__(x, y, angle, BALL_WIDTH, BALL_LENGTH, BALL_HEIGHT)
 
 
 class Goal(PitchObject):
@@ -313,15 +312,20 @@ class World(object):
         self._pitch = Pitch(pitch_num)
         self._ball = Ball(0, 0, 0, 0)
         self._our_robot = Robot(0, 0, 0, 0)
+        self._task = Task(self)
 
     @property
     def pitch(self):
-        return self.pitch
+        return self._pitch
 
     @property
     def ball(self):
-        return self.ball
+        return self._ball
 
     @property
     def our_robot(self):
-        return self.our_robot
+        return self._our_robot
+
+    @property
+    def task(self):
+        return self._task

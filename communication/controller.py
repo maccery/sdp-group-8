@@ -244,13 +244,18 @@ class Controller(Arduino):
 
         if power is None:
             power = 1.0
-        power = int(abs(power) * 255.)
-        cmd = self.COMMANDS['kick']
-        cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
-        self._write(cmd)
-        time.sleep(5)
-        self.run_motor(3, -0.5, 500)
-        return 0.4
+        # power = int(abs(power) * 255.)
+        # cmd = self.COMMANDS['kick']
+        # cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
+        # self._write(cmd)
+        self.run_motor(3, 0.2, 800)
+        time.sleep(1)
+        self.run_motor(3, -1.0 * power, (250 / power))
+        time.sleep(2)
+        self.run_motor(3, 0.15, 1000)
+        time.sleep(2)
+        self.run_motor(3, 0.15, 400)
+        return 4
 
     def grab(self):
         """
@@ -341,42 +346,19 @@ class Controller(Arduino):
         self._write(cmd, important=True)
         return 0.01
 
-    def turn_clockwise(self, angle):
+    def turn(self, duration):
         """
-        Turns the robot at a specific angle, positive is clockwise
+        Turns the robot for a duration of time given. Positive is counterclockwise.
 
-        :param angle: given in radians
-        :return: duation the Ardunio to be blocked for
+        :param duration: given in milliseconds
+        :return: duration the Arduino is blocked for
         """
 
-        angle = convert_angle(-angle)  # so it's in [-pi;pi] range
-        # if angle is positive move clockwise, otw just inverse it
-        power = self.MAX_POWER if angle >= 0 else -self.MAX_POWER
-        angle = abs(angle)
-
-        print(angle, power)
-        # angle = abs(angle)
-        # if angle < 0.67:
-        #    duration = int(angle_poly(angle) * 1000)
-        # else:
-        # pi/2 -> 200, pi/4 -> 110
-        # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
-        # duration = int(360.0 / 3.14 * angle + 20.0)
-
-        # NOTE: Changed angle to duration purely for milestone 1
-
-        # Linear approximation from an excel spreadsheet
-        # See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
-        duration = 160.044 * (angle + 0.405)
-        duration = 0 if duration < 0 else duration
-
-        print "Duration:", duration
-        duration = -duration if power < 0 else duration
-        print duration
+        power = self.MAX_POWER if duration >= 0 else -self.MAX_POWER
         cmd = self.COMMANDS['turn']
         cmd = self.get_command(cmd, (duration, 'h'))  # short
         self._write(cmd)
-        return duration * 0.001 + 0.07
+        return (duration / 1000)
 
     def run_motor(self, id, power, duration):
         """
