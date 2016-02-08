@@ -42,7 +42,7 @@
 		"val_high": 255
     },
     "green": {
-    	"hue1_low": 20,
+    	"hue1_low": 50,
 		"sat_low": 100,
 		"val_low": 100,   
 		"hue1_high": 90,

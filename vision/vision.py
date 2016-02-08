@@ -1,3 +1,5 @@
+from __future__ import division
+
 import numpy as np
 import cv2
 import json
@@ -15,7 +17,7 @@ class Vision(object):
 
     def __init__(self, file_path=None):
         self.camera = Camera()
-        self.setup_camera()
+        self.camera.setup_camera()
 
         if file_path is None:
             self.calibrations = get_calibrations()
@@ -40,6 +42,8 @@ class Vision(object):
         # Convert the frame to HSV color space.
         modified_frame = cv2.cvtColor(modified_frame, cv2.COLOR_BGR2HSV)
 
+        print(ball)
+
         red_mask = cv2.inRange(modified_frame, (ball['hue1_low'], ball['sat_low'], ball['val_low']), (ball['hue1_high'], ball['sat_high'], ball['val_high']))
         violet_mask = cv2.inRange(modified_frame, (ball['hue2_low'], ball['sat_low'], ball['val_low']), (ball['hue2_high'], ball['sat_high'], ball['val_high']))
         modified_frame = cv2.bitwise_or(red_mask, violet_mask)
@@ -56,13 +60,21 @@ class Vision(object):
             print("Ball is not detected!")
             return 0, None, modified_frame
 
-        center, radius = self.get_contour_center(largest_contour)
+        ((x, y), radius) = cv2.minEnclosingCircle(largest_contour)
+        center = (x, y)
+
+        cv2.circle(self.frame, (int(x), int(y)), int(radius + 3), (0, 0, 0), -1)
+        # center = self.get_contour_center(largest_contour)
 
         return radius, center, modified_frame
 
     def get_largest_contour(self, contours):
         areas = [cv2.contourArea(c) for c in contours]
-        return contours[np.argmax(areas)]
+        return contours[np.argmax(areas)] if len(areas) > 0 else None
+
+    def get_contour_center(c):
+        M = cv2.moments(c)
+        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
     def recognize_plates(self):
         """
@@ -74,50 +86,52 @@ class Vision(object):
         """
         # pink = self.calibrations['pink']
 
-        modified_frame = self.frame
+        frame = self.frame.copy()
+        frame = cv2.GaussianBlur(frame, (5, 5), 0)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 27, 150, 106, 255, 255, 255
-        modified_frame = cv2.inRange(modified_frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
-        pink_frame =  cv2.inRange(modified_frame, (150, 100, 100), (255, 255, 255))
-        pink_frame = cv2.dilate(pink_frame, None, iterations=1)
-        modified_frame = cv2.bitwise_or(modified_frame, pink_frame)
+        not_grey_mask = cv2.inRange(frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
+        pink_mask =  cv2.inRange(frame, (150, 100, 100), (255, 255, 255))
+        pink_mask = cv2.dilate(pink_mask, None, iterations=1)
+        plate_mask = cv2.bitwise_or(not_grey_mask, pink_mask)
 
-        modified_frame = cv2.GaussianBlur(modified_frame, (15, 15), 0)
+        plate_mask = cv2.GaussianBlur(plate_mask, (15, 15), 0)
         kernel =  cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
-        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_CLOSE, kernel)
-        modified_frame = cv2.morphologyEx(modified_frame, cv2.MORPH_OPEN, kernel)
-        cv2.imshow("plate detection", modified_frame)
+        plate_mask = cv2.morphologyEx(plate_mask, cv2.MORPH_CLOSE, kernel)
+        plate_mask = cv2.morphologyEx(plate_mask, cv2.MORPH_OPEN, kernel)
+        cv2.imshow("plate detection", plate_mask)
 
-        contours = cv2.findContours(modified_frame.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        contours = cv2.findContours(plate_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
 
-        contour_index = 0
+        cnt_index = 0
         for cnt in contours:
             print cv2.contourArea(cnt)
             if cv2.contourArea(cnt) < 500:
                 cnt_index += 1
                 continue
             # copy the contour part from the image
-            tmp = np.zeros((480,640,3), np.uint8)
-            cv2.drawContours(tmp, contours, cnt_index, (255,255,255), cv2.FILLED);
+            contour_frame = np.zeros((480,640,3), np.uint8)
+            cv2.drawContours(contour_frame, contours, cnt_index, (255,255,255), cv2.FILLED);
             
             #cv2.imshow('abc' + str(cnt_index), image)
             #cv2.imshow('adas' + str(cnt_index), tmp)
-            tmp = cv2.bitwise_and(image, tmp)
-            #cv2.imshow('adaasds' + str(cnt_index), tmp)
+            contour_frame = cv2.bitwise_and(self.frame, contour_frame)
+            #cv2.imshow('adaasds' + str(cnt_index), contour_frame)
 
-            tmp = cv2.cvtColor(tmp, cv2.COLOR_BGR2HSV)
+            contour_frame = cv2.cvtColor(contour_frame, cv2.COLOR_BGR2HSV)
             #if cnt_index == 2:
             #    cv2.imshow("this", tmp)
             # count blue coloured pixels
-            blue_no = count_pixels('blue', tmp)
+            blue_no = self.count_pixels('blue', contour_frame)
             print("blue", blue_no)
             # count yellow coloured pixels
-            yellow_no = count_pixels('yellow', tmp)
+            yellow_no = self.count_pixels('yellow', contour_frame)
             print("yellow", yellow_no)
             # count green coloured pixels
-            green_no = count_pixels('green', tmp)
+            green_no = self.count_pixels('green', contour_frame)
             print("green", green_no)
             # count pink coloured pixels
-            pink_no =  count_pixels('pink', tmp)
+            pink_no =  self.count_pixels('pink', contour_frame)
             # pink_no += count_pixels(0, 0, 0, 25, 255, 255, tmp)
             print("pink", pink_no)
 
@@ -131,11 +145,11 @@ class Vision(object):
                 v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 160, 100, 80, 180, 255, 255
             else:
                 v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 50, 100, 100, 90, 255, 255
-            tmp_mask = cv2.inRange(tmp, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
+            tmp_mask = cv2.inRange(contour_frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
             m = cv2.moments(tmp_mask, True)
             (tx, ty) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
             print(tx, ty)
-            cv2.circle(image, (tx, ty), 5, (255, 255, 255), -1)
+            cv2.circle(self.frame, (tx, ty), 5, (255, 255, 255), -1)
 
             # find the rotated rectangle around the plate
             rect = cv2.minAreaRect(cnt)
@@ -159,20 +173,21 @@ class Vision(object):
                 if (tmp_dist < distance):
                     distance = tmp_dist
                     closest_corner = i
-            cv2.circle(image, (box[closest_corner][0], box[closest_corner][1]), 5, (100, 100, 255), -1)
+            cv2.circle(self.frame, (box[closest_corner][0], box[closest_corner][1]), 5, (100, 100, 255), -1)
             
             # find centre
             m = cv2.moments(cnt, False);
             (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
 
             # draw direction line
-            cv2.line(image, (cx, cy), (cx + box[closest_corner][0] - box[(closest_corner - 1) % 4][0], cy + box[closest_corner][1] - box[(closest_corner - 1) % 4][1]),(255, 255, 255), 3)
+            cv2.line(self.frame, (cx, cy), (cx + box[closest_corner][0] - box[(closest_corner - 1) % 4][0], cy + box[closest_corner][1] - box[(closest_corner - 1) % 4][1]),(255, 255, 255), 3)
 
-            cv2.drawContours(image,[box],0,(0,0,255),2)
-            cv2.putText(image, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+            cv2.drawContours(self.frame,[box],0,(0,0,255),2)
+            cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
             cnt_index += 1
+        return None, frame
 
-    def count_pixels(type, mask):
+    def count_pixels(self, type, mask):
         data = self.calibrations[type]
         dst = cv2.inRange(mask, (data['hue1_low'], data['sat_low'], data['val_low']), (data['hue1_high'], data['sat_high'], data['val_high']))
         return cv2.countNonZero(dst)
@@ -188,23 +203,19 @@ class Vision(object):
 
         ball_mask = None
         ball_radius, ball_center, ball_mask = self.recognize_ball()
-        print("BALL - x : %d y : %d radius : %d" % (ball_center[0], ball_center[1], ball_radius))
-        data['ball']['radius'] = ball_radius
-        data['ball']['center'] = (ball_center[0], ball_center[1])
+        if ball_center is not None:
+            print("BALL - x : %d y : %d radius : %d" % (ball_center[0], ball_center[1], ball_radius))
+            data['ball']['radius'] = ball_radius
+            data['ball']['center'] = (ball_center[0], ball_center[1])
+
 
         # Robots recognition code goes here.
         # Store things into data dictionary.
-        self.recognize_plates()
+        abc, modified_frame = self.recognize_plates()
 
         # Should return data dictionary and the modified frame to the drawing utilities.
         return data, modified_frame
 
-
-    def setup_camera(self):
-        self.camera.set(cv2.CAP_PROP_BRIGHTNESS, 0.5)
-        self.camera.set(cv2.CAP_PROP_CONTRAST, 0.5)
-        self.camera.set(cv2.CAP_PROP_SATURATION, 0.5)
-        self.camera.set(cv2.CAP_PROP_HUE, 0.5)
 
 def get_calibrations(file_path=None):
     if file_path is None:
@@ -235,9 +246,15 @@ class Camera(object):
         self.c_matrix = radial_data['camera_matrix']
         self.dist = radial_data['dist']
 
+    def setup_camera(self):
+        self.capture.set(cv2.CAP_PROP_BRIGHTNESS, 0.5)
+        self.capture.set(cv2.CAP_PROP_CONTRAST, 0.5)
+        self.capture.set(cv2.CAP_PROP_SATURATION, 0.5)
+        self.capture.set(cv2.CAP_PROP_HUE, 0.5)
+
     def get_frame(self):
         status, frame = self.capture.read()
-        frame = self.fix_radial_distortion()
+        frame = self.fix_radial_distortion(frame)
         if status:
             return frame
 
@@ -327,9 +344,10 @@ class GUI(object):
 
     def draw_ball_text(self, data):
         center = data['ball']['center']
-        x = center[0]
-        y = center[1]
-        cv2.putText("Ball: x: %d, y: %d" % (x, y), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+        x = int(center[0])
+        y = int(center[1])
+        cv2.putText(self.frame, "Ball: x: %d, y: %d" % (x, y), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
 
     def draw_fps(self, delta_t):
-        self.draw_text("FPS: " + str(1 / delta_t), 20, 20)
+        pass
+        # self.draw_text("FPS: " + str(1 / delta_t), 20, 20)
