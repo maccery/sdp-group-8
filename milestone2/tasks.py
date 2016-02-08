@@ -104,7 +104,8 @@ class Subtasks(object):
         if angle_to_rotate <= 15:
             return True
         else:
-            wait_time = self._communicate.turn_clockwise(angle_to_rotate)
+            duration = self.calculate_motor_duration_turn(angle_to_rotate)
+            wait_time = self._communicate.turn(duration)
             time.sleep(wait_time)
 
     def ungrab_ball(self):
@@ -121,6 +122,15 @@ class Subtasks(object):
         wait_time = self._communicate.kick()
         time.sleep(wait_time)
         return True
+
+    @staticmethod
+    def calculate_motor_duration_turn(angle_to_rotate):
+        """
+        :param angle_to_rotate: given in degrees
+        """
+        # crude angle -> duration conversion
+        duration = angle_to_rotate * 0.5
+        return duration
 
     @staticmethod
     def calculate_motor_duration(distance):
