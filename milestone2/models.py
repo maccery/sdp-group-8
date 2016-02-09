@@ -7,7 +7,7 @@ class Robot(object):
         self.is_busy = False
         self.x = x
         self.y = y
-        self.angle = angle
+        self.angle = angle # in degrees please
 
     def get_rotation_to_point(self, x, y):
         """
@@ -18,14 +18,14 @@ class Robot(object):
         :param target_coordinates:
         :return: angle +clockwise, in degrees
         """
-
+        angle_in_radians = self.angle / 180 * pi
         delta_x = x - self.x
         delta_y = y - self.y
         displacement = hypot(delta_x, delta_y)
         if displacement == 0:
             theta = 0
         else:
-            theta = atan2(delta_y, delta_x) - atan2(sin(self.angle), cos(self.angle))
+            theta = atan2(delta_y, delta_x) - atan2(sin(angle_in_radians), cos(angle_in_radians))
             if theta > pi:
                 theta -= 2 * pi
             elif theta < -pi:
