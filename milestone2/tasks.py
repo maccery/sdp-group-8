@@ -36,12 +36,15 @@ class Task(object):
 
     def move_and_grab_ball(self):
         subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
-                        self._subtasks.grab_ball(),
-                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y)]
+                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y),
+                        self._subtasks.grab_ball()]
 
         self.execute_tasks(subtask_list)
 
-    def kick_ball_in_goal(self, goal_x, goal_y):
+    def kick_ball_in_goal(self):
+
+        goal_x = self.world.goal.x
+        goal_y = self.world.goal.y
 
         # Turn and face the goal, then kick the ball
         subtask_list = [self._subtasks.rotate_to_alignment(goal_x, goal_y),

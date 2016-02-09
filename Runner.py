@@ -42,8 +42,6 @@ class Runner(object):
 
         self.wait_for_vision = True
 
-
-
     def vision_feed(self):
         """
        Constantly updates the vision feed, and positions of our models
