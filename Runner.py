@@ -86,14 +86,20 @@ class Runner(object):
         """
         Executes the current task
         """
-        if self.world.our_robot.is_busy is False:
-            print ("task is ", self.task)
-            if self.task == 'move_to_ball':
-                self.world.task.move_to_ball()
-            if self.task == 'kick_ball_in_goal':
-                self.world.task.kick_ball_in_goal()
-            if self.task == 'move_and_grab_ball':
-                self.world.task.move_and_grab_ball()
+
+        # Only execute a task if the robot isn't currently in the middle of doing one
+        print ("task is ", self.task)
+        task_to_execute = None
+        if self.task == 'move_to_ball':
+            task_to_execute = self.world.task.move_to_ball
+        if self.task == 'kick_ball_in_goal':
+            task_to_execute = self.world.task.kick_ball_in_goal
+        if self.task == 'move_and_grab_ball':
+            task_to_execute = self.world.task.move_and_grab_ball
+
+        task_to_execute()
+
+        print("Task completed ")
 
     def run(self):
         p1 = Process(target=self.vision_feed)

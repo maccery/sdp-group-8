@@ -27,7 +27,12 @@ class Task(object):
         subtask_list = [self._subtasks.rotate_to_ball,
                         self._subtasks.move_to_ball]
 
-        self.execute_tasks(subtask_list)
+        distance_okay = False
+        while distance_okay is False:
+            self._subtasks.rotate_to_ball()
+            distance_okay = self._subtasks.move_to_ball()
+
+        return True
 
     def move_and_grab_ball(self):
         subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
@@ -52,14 +57,17 @@ class Task(object):
         # Go through our task list, waiting for each task to complete before moving onto next task
         for subtask in subtask_list:
             print ("subtask)")
-            subtask_complete = subtask()
-            # if the subtask isn't complete, don't move onto the next task
-            if subtask_complete is False:
-                exit()
 
+            subtask_complete = subtask()
+            # if the subtask isn't complete, don't move onto the next task, quit the loop and start again, return false
+            # as we haven't finished all tasks
+            while subtask_complete is False:
+                subtask_complete = subtask()
+
+        # We've completed all tasks, return true
         print ("we're done baby")
-        # Update the robot to non-busy status
         self._world.our_robot.is_busy = False
+        return True
 
 
 class Subtasks(object):
