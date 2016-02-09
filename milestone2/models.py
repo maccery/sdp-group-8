@@ -232,6 +232,9 @@ class Robot(object):
                 theta += 2 * pi
         assert -pi <= theta <= pi
 
+        # convert to CLOCKWISE degrees
+        theta = -(theta * 180 / pi)
+
         return theta
 
     def get_displacement_to_point(self, x, y):

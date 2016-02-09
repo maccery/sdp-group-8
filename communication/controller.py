@@ -339,7 +339,7 @@ class Controller(Arduino):
         """
         cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))
         self._write(cmd)
-        return duration * 0.001 + 0.07
+        return duration / 200
 
     def stop(self):
         cmd = self.get_command(self.COMMANDS['stop'], (ord('T'), 'B'), (ord('O'), 'B'))
@@ -358,7 +358,8 @@ class Controller(Arduino):
         cmd = self.COMMANDS['turn']
         cmd = self.get_command(cmd, (duration, 'h'))  # short
         self._write(cmd)
-        return (duration / 1000)
+
+        return duration / 200
 
     def run_motor(self, id, power, duration):
         """

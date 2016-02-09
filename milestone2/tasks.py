@@ -24,8 +24,8 @@ class Task(object):
 
         print("move_to_ball command called")
         # The list of subtasks we need to execute to complete this big task
-        subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
-                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y)]
+        subtask_list = [self._subtasks.rotate_to_ball,
+                        self._subtasks.move_to_ball]
 
         self.execute_tasks(subtask_list)
 
@@ -51,12 +51,13 @@ class Task(object):
 
         # Go through our task list, waiting for each task to complete before moving onto next task
         for subtask in subtask_list:
+            print ("subtask)")
             subtask_complete = subtask()
-
             # if the subtask isn't complete, don't move onto the next task
             if subtask_complete is False:
-                exit()
+               exit()
 
+        print ("we're done baby")
         # Update the robot to non-busy status
         self._world.our_robot.is_busy = False
 
@@ -88,13 +89,21 @@ class Subtasks(object):
             return True
         else:
             calculated_duration = self.calculate_motor_duration(distance)
+            print ("RUnnin g for duration: ", calculated_duration)
 
             # Tell arduino to move for the duration we've calculated
-            self._communicate.move_duration(calculated_duration)
+            self._communicate.move_duration(-calculated_duration)
 
             # Wait until this task has completed
-            time.sleep(calculated_duration)
+            print("We're sleeping for a bit while arudino gets it shit together", calculated_duration)
+            time.sleep(calculated_duration / 1000)
             return False
+
+    def rotate_to_ball(self):
+        self.rotate_to_alignment(self._world.ball.x, self._world.ball.y)
+
+    def move_to_ball(self):
+        self.move_to_coordinates(self._world.ball.x, self._world.ball.y)
 
     def rotate_to_alignment(self, x, y):
         """
@@ -102,16 +111,21 @@ class Subtasks(object):
 
         :param target_vector:
         """
+        print ("robots coordinates", self._world.our_robot.x, self._world.our_robot.y)
         print("Rotate to face these co-ordinates: (", x, ",", y, ")")
         angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
 
+        print("calculated angle is ", angle_to_rotate)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if angle_to_rotate <= 15:
+        if angle_to_rotate <= 15 and angle_to_rotate >= -15:
             return True
         else:
             duration = self.calculate_motor_duration_turn(angle_to_rotate)
+            print("turning for duration ", duration)
             wait_time = self._communicate.turn(duration)
-            time.sleep(wait_time)
+            print("We're sleeping for a bit while arudino gets it shit together", wait_time)
+            time.sleep(abs(wait_time))
+            return False
 
     def ungrab_ball(self):
         wait_time = self._communicate.ungrab()
@@ -134,7 +148,11 @@ class Subtasks(object):
         :param angle_to_rotate: given in degrees
         """
         # crude angle -> duration conversion
-        duration = angle_to_rotate * 0.5
+        duration = 100 + (abs(angle_to_rotate) * 7.1)
+
+        if angle_to_rotate < 0:
+            duration = -duration
+
         return duration
 
     @staticmethod

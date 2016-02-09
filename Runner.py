@@ -38,12 +38,14 @@ class Runner(object):
         # Set up GUI
         self.color = color
 
+        self.wait_for_vision = True
+
     def run(self):
         """
         Ready your sword, here be dragons.
         """
 
-        counter = 1L
+        counter = 0
         timer = time.clock()
 
         print("waiting 10 seconds for Arduino to get its shit together")
@@ -63,12 +65,17 @@ class Runner(object):
                 # update the gui
                 self.gui.update(delta_time, self.vision.frame, modified_frame, data)
 
-                # Recgonise the ball and our robot; note these functions don't currently return vectors....
+                # Update our world with the positions of robot and ball
                 self.world.update_positions(data)
 
+                print ("task", counter)
+                if counter % 35 == 0:
+                    self.wait_for_vision = False
+                else:
+                    self.wait_for_vision = True
 
                 # Execute the given task requested
-                if self.world.our_robot.is_busy is False:
+                if self.wait_for_vision is False and self.world.our_robot.is_busy is False:
                     print ("task is ", self.task)
                     if self.task == 'move_to_ball':
                         self.world.task.move_to_ball()
