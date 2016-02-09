@@ -143,7 +143,7 @@ class Vision(object):
             # print("pink green ratio", pgr)
 
             # find the mass centre of the single circle (to find angle)
-            if pgr < 1.0:
+            if pgr < 0.5:
                 v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 160, 100, 80, 180, 255, 255
             else:
                 v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 50, 100, 100, 90, 255, 255
@@ -181,7 +181,7 @@ class Vision(object):
             m = cv2.moments(cnt, False);
             (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
 
-            if pgr < 1.0:
+            if pgr < 0.5:
                 group = 'green'
             else:
                 group = 'pink'
@@ -191,15 +191,22 @@ class Vision(object):
             else:
                 team = 'blue'
 
-            direction_vector_x = box[closest_corner][0] - box[(closest_corner - 1) % 4][0]
-            direction_vector_y = box[closest_corner][1] - box[(closest_corner - 1) % 4][1]
-            robot_data.append({'center': (cx, cy), 'angle': math.atan2(direction_vector_y, direction_vector_x), 'team': team, 'group': group})
-            # draw direction line
-            cv2.line(self.frame, (cx, cy), (cx + direction_vector_x, cy + direction_vector_y),(255, 255, 255), 3)
+# draw direction line
+            direction_vector_x = -(box[(closest_corner) % 4][0] - box[(closest_corner + 1) % 4][0])
+            direction_vector_y = -(box[(closest_corner) % 4][1] - box[(closest_corner + 1) % 4][1])
+            angle = math.atan2(direction_vector_y, direction_vector_x) + math.pi / 2
+            if angle > math.pi:
+                angle -= 2 * math.pi
+            angle = angle / 2 / math.pi * 360
+            print("angle:", angle)
+            cv2.putText(image, "angle %lf" % (angle), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 5, None, 2)   
 
-            cv2.drawContours(self.frame,[box],0,(0,0,255),2)
-            cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+            cv2.line(image, (cx, cy), (cx + direction_vector_x, cy + direction_vector_y),(255, 255, 255), 3)
+            robot_data.append({'center': (cx, cy), 'angle': angle, 'team': team, 'group': group})
+            cv2.drawContours(image,[box],0,(0,0,255),2)
+            cv2.putText(image, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
             cnt_index += 1
+
         # print(robot_data)
         return robot_data, frame
 
