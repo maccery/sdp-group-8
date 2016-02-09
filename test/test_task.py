@@ -54,9 +54,9 @@ class TestRotation(unittest.TestCase):
         angle_in_degrees = 180
         robot = Robot(0, 0, angle_in_degrees)
 
-        angle_to_rotate = robot.get_rotation_to_point(4, 4)
+        angle_to_rotate = robot.get_rotation_to_point(0, 0)
 
-        self.assertEqual(angle_to_rotate, -135)
+        self.assertEqual(angle_to_rotate, -180)
 
-    if __name__ == '__main__':
-        unittest.main()
+if __name__ == '__main__':
+    unittest.main()
