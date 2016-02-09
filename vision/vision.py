@@ -191,9 +191,11 @@ class Vision(object):
             else:
                 team = 'blue'
 
-            robot_data.append({'center': (cx, cy), 'angle': math.atan2(cy, cx), 'team': team, 'group': group})
+            direction_vector_x = box[closest_corner][0] - box[(closest_corner - 1) % 4][0]
+            direction_vector_y = box[closest_corner][1] - box[(closest_corner - 1) % 4][1]
+            robot_data.append({'center': (cx, cy), 'angle': math.atan2(direction_vector_y, direction_vector_x), 'team': team, 'group': group})
             # draw direction line
-            cv2.line(self.frame, (cx, cy), (cx + box[closest_corner][0] - box[(closest_corner - 1) % 4][0], cy + box[closest_corner][1] - box[(closest_corner - 1) % 4][1]),(255, 255, 255), 3)
+            cv2.line(self.frame, (cx, cy), (cx + direction_vector_x, cy + direction_vector_y),(255, 255, 255), 3)
 
             cv2.drawContours(self.frame,[box],0,(0,0,255),2)
             cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
