@@ -42,7 +42,7 @@ class Runner(object):
 
         self.wait_for_vision = True
 
-    def vision_feed(self):
+    def run(self):
         """
        Constantly updates the vision feed, and positions of our models
        """
@@ -50,9 +50,10 @@ class Runner(object):
         counter = 0
         timer = time.clock()
 
+        # wait 10 seconds for arduino to connect
         print("waiting 10 seconds for Arduino to get its shit together")
-        Logger.log_write("test")
         time.sleep(10)
+        Logger.log_write("test")
         try:
             c = True
             # self.robot.ping()
@@ -70,6 +71,10 @@ class Runner(object):
 
                 # Update our world with the positions of robot and ball
                 self.world.update_positions(data)
+
+                # wait for vision to update, then run the task
+                if counter % 10 == 0:
+                    self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
@@ -90,22 +95,17 @@ class Runner(object):
         # Only execute a task if the robot isn't currently in the middle of doing one
         print ("task is ", self.task)
         task_to_execute = None
-        if self.task == 'move_to_ball':
+        if self.task == 'task_move_to_ball':
             task_to_execute = self.world.task.move_to_ball
-        if self.task == 'kick_ball_in_goal':
+        if self.task == 'task_kick_ball_in_goal':
             task_to_execute = self.world.task.kick_ball_in_goal
-        if self.task == 'move_and_grab_ball':
+        if self.task == 'task_move_and_grab_ball':
             task_to_execute = self.world.task.move_and_grab_ball
 
-        task_to_execute()
+        if task_to_execute():
+            self.task = None
 
         print("Task completed ")
-
-    def run(self):
-        p1 = Process(target=self.vision_feed)
-        p1.start()
-        p2 = Process(target=self.task_execution)
-        p2.start()
 
     def save_calibrations(self):
         dump_calibrations(self.vision.calibrations, self.calib_file)

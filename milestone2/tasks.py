@@ -5,8 +5,8 @@ import time
 
 class Task(object):
     def __init__(self, world):
-        self._subtasks = Subtasks(world)
         self._world = world
+        self._communicate = Controller()
 
     @property
     def world(self):
@@ -20,67 +20,29 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
-    def move_to_ball(self):
+    def task_move_to_ball(self):
 
         print("move_to_ball command called")
-        # The list of subtasks we need to execute to complete this big task
-        subtask_list = [self._subtasks.rotate_to_ball,
-                        self._subtasks.move_to_ball]
+        # If we're happy with ball rotation and movement stop
+        if self.rotate_to_ball() and self.move_to_ball():
+            return True
+        else:
+            return False
 
-        distance_okay = False
-        while distance_okay is False:
-            self._subtasks.rotate_to_ball()
-            distance_okay = self._subtasks.move_to_ball()
+    def task_move_and_grab_ball(self):
+        self.rotate_to_alignment(self.world.ball.x, self.world.ball.y)
+        self.move_to_coordinates(self.world.ball.x, self.world.ball.y)
+        self.grab_ball()
 
-        return True
-
-    def move_and_grab_ball(self):
-        subtask_list = [self._subtasks.rotate_to_alignment(self.world.ball.x, self.world.ball.y),
-                        self._subtasks.move_to_coordinates(self.world.ball.x, self.world.ball.y),
-                        self._subtasks.grab_ball()]
-
-        self.execute_tasks(subtask_list)
-
-    def kick_ball_in_goal(self):
+    def task_kick_ball_in_goal(self):
 
         goal_x = self.world.goal.x
         goal_y = self.world.goal.y
 
         # Turn and face the goal, then kick the ball
-        subtask_list = [self._subtasks.rotate_to_alignment(goal_x, goal_y),
-                        self._subtasks.ungrab_ball(),
-                        self._subtasks.kick_ball()]
-
-        self.execute_tasks(subtask_list)
-
-    def execute_tasks(self, subtask_list):
-        # Update the robot to state we're actually doing a task and busy
-        self._world.our_robot.is_busy = True
-
-        # Go through our task list, waiting for each task to complete before moving onto next task
-        for subtask in subtask_list:
-            print ("subtask)")
-
-            subtask_complete = subtask()
-            # if the subtask isn't complete, don't move onto the next task, quit the loop and start again, return false
-            # as we haven't finished all tasks
-            while subtask_complete is False:
-                subtask_complete = subtask()
-
-        # We've completed all tasks, return true
-        print ("we're done baby")
-        self._world.our_robot.is_busy = False
-        return True
-
-
-class Subtasks(object):
-    def __init__(self, world):
-        self._communicate = Controller()
-        self._world = world
-
-    """
-    Subtasks are one specific thing, such as 'kick', that is communicated to the Arduino
-    """
+        self.rotate_to_alignment(goal_x, goal_y)
+        self.ungrab_ball()
+        self.kick_ball()
 
     def move_to_coordinates(self, x, y):
         """
