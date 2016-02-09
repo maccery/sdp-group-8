@@ -1,5 +1,6 @@
 from milestone2.models import World, Task
 from postprocessing import PostProcessing
+from multiprocessing import Process
 from vision.vision import Vision, GUI
 from vision.vision import dump_calibrations
 from vision import tools
@@ -40,10 +41,12 @@ class Runner(object):
 
         self.wait_for_vision = True
 
-    def run(self):
+
+
+    def vision_feed(self):
         """
-        Ready your sword, here be dragons.
-        """
+       Constantly updates the vision feed, and positions of our models
+       """
 
         counter = 0
         timer = time.clock()
@@ -68,22 +71,6 @@ class Runner(object):
                 # Update our world with the positions of robot and ball
                 self.world.update_positions(data)
 
-                print ("task", counter)
-                if counter % 35 == 0:
-                    self.wait_for_vision = False
-                else:
-                    self.wait_for_vision = True
-
-                # Execute the given task requested
-                if self.wait_for_vision is False and self.world.our_robot.is_busy is False:
-                    print ("task is ", self.task)
-                    if self.task == 'move_to_ball':
-                        self.world.task.move_to_ball()
-                    if self.task == 'kick_ball_in_goal':
-                        self.world.task.kick_ball_in_goal()
-                    if self.task == 'move_and_grab_ball':
-                        self.world.task.move_and_grab_ball()
-
                 key = cv2.waitKey(4) & 0xFF
                 if key == ord('q'):
                     break
@@ -94,6 +81,25 @@ class Runner(object):
         finally:
             pass
             # self.robot.stop()
+
+    def task_execution(self):
+        """
+        Executes the current task
+        """
+        if self.world.our_robot.is_busy is False:
+            print ("task is ", self.task)
+            if self.task == 'move_to_ball':
+                self.world.task.move_to_ball()
+            if self.task == 'kick_ball_in_goal':
+                self.world.task.kick_ball_in_goal()
+            if self.task == 'move_and_grab_ball':
+                self.world.task.move_and_grab_ball()
+
+    def run(self):
+        p1 = Process(target=self.vision_feed)
+        p1.start()
+        p2 = Process(target=self.task_execution)
+        p2.start()
 
     def save_calibrations(self):
         dump_calibrations(self.vision.calibrations, self.calib_file)

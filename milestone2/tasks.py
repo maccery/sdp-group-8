@@ -55,7 +55,7 @@ class Task(object):
             subtask_complete = subtask()
             # if the subtask isn't complete, don't move onto the next task
             if subtask_complete is False:
-               exit()
+                exit()
 
         print ("we're done baby")
         # Update the robot to non-busy status
@@ -117,7 +117,8 @@ class Subtasks(object):
 
         print("calculated angle is ", angle_to_rotate)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if angle_to_rotate <= 15 and angle_to_rotate >= -15:
+        if 15 >= angle_to_rotate >= -15:
+            print("We're happy with the angle, no more rotation")
             return True
         else:
             duration = self.calculate_motor_duration_turn(angle_to_rotate)
