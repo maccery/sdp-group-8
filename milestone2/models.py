@@ -11,10 +11,12 @@ class Robot(object):
 
     def get_rotation_to_point(self, x, y):
         """
-        Calculates the rotation required to achieve alignment with given co-ordinates
+        Calculates the rotation required to achieve alignment with given co-ordinates.
+        This presumes the robot's angle given is the degrees from north, +clockwise.
+        So "10 degrees", is 10 degrees clockwise from North
 
         :param target_coordinates:
-        :return: angle
+        :return: angle +clockwise, in degrees
         """
 
         delta_x = x - self.x
@@ -31,7 +33,7 @@ class Robot(object):
         assert -pi <= theta <= pi
 
         # convert to CLOCKWISE degrees
-        theta = -(theta * 180 / pi)
+        theta = theta * 180 / pi
 
         return theta
 
