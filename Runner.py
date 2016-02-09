@@ -1,4 +1,5 @@
 from milestone2.models import World, Task
+from milestone2.logger import Logger
 from postprocessing import PostProcessing
 from multiprocessing import Process
 from vision.vision import Vision, GUI
@@ -52,6 +53,7 @@ class Runner(object):
         timer = time.clock()
 
         print("waiting 10 seconds for Arduino to get its shit together")
+        Logger.log_write("test")
         time.sleep(10)
         try:
             c = True
