@@ -25,9 +25,10 @@ class Vision(object):
         else:
             self.calibrations = get_calibrations(file_path)
         # croppings = self.calibrations['croppings']
-        
+        self.ball_queue = []
         # assert croppings['y2'] - croppings['y1'] == MAX_HEIGHT
         # assert croppings['x2'] - croppings['x1'] == MAX_WIDTH
+
 
     def recognize_ball(self):
         """
@@ -63,6 +64,14 @@ class Vision(object):
 
         ((x, y), radius) = cv2.minEnclosingCircle(largest_contour)
         center = (x, y)
+        self.ball_queue.append((x, y))
+        if len(self.ball_queue) > 5:
+            self.ball_queue = self.ball_queue[1:]
+        ball_vector_x = int(self.ball_queue[-1][0] - self.ball_queue[0][0])
+        ball_vector_y = int(self.ball_queue[-1][1] - self.ball_queue[0][1])
+        x = int(x)
+        y = int(y)
+        cv2.line(self.frame, (x, y), (x + ball_vector_x, y + ball_vector_y), (255, 255, 255))
 
         cv2.circle(self.frame, (int(x), int(y)), int(radius + 3), (0, 0, 0), -1)
         # center = self.get_contour_center(largest_contour)
@@ -114,7 +123,7 @@ class Vision(object):
             # copy the contour part from the image
             contour_frame = np.zeros((480,640,3), np.uint8)
             cv2.drawContours(contour_frame, contours, cnt_index, (255,255,255), cv2.FILLED);
-            
+
             #cv2.imshow('abc' + str(cnt_index), image)
             #cv2.imshow('adas' + str(cnt_index), tmp)
             contour_frame = cv2.bitwise_and(self.frame, contour_frame)
@@ -176,7 +185,7 @@ class Vision(object):
                     distance = tmp_dist
                     closest_corner = i
             cv2.circle(self.frame, (box[closest_corner][0], box[closest_corner][1]), 5, (100, 100, 255), -1)
-            
+
             # find centre
             m = cv2.moments(cnt, False);
             (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
@@ -198,13 +207,13 @@ class Vision(object):
             if angle > math.pi:
                 angle -= 2 * math.pi
             angle = angle / 2 / math.pi * 360
-            print("angle:", angle)
-            cv2.putText(image, "angle %lf" % (angle), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 5, None, 2)   
+            cv2.putText(self.frame, "angle %lf" % (angle), (cx, cy), cv2.FONT_HERSHEY_SIMPLEX, 1, None, 1)
 
-            cv2.line(image, (cx, cy), (cx + direction_vector_x, cy + direction_vector_y),(255, 255, 255), 3)
+            cv2.line(self.frame, (cx, cy), (cx + direction_vector_x, cy + direction_vector_y),(255, 255, 255), 3)
             robot_data.append({'center': (cx, cy), 'angle': angle, 'team': team, 'group': group})
-            cv2.drawContours(image,[box],0,(0,0,255),2)
-            cv2.putText(image, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+            cv2.drawContours(self.frame,[box],0,(0,0,255),2)
+            #cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
+            cv2.putText(self.frame, "PLATE: team %s group %s" % (team, group), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.7, None, 1)
             cnt_index += 1
 
         # print(robot_data)
@@ -301,7 +310,7 @@ class GUI(object):
     TB_SAT_LOW = 'Sat Low'
     TB_VAL_HIGH = 'Val High'
     TB_VAL_LOW = 'Val Low'
-    
+
     # member attributes
 
     frame = None

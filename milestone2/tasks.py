@@ -39,8 +39,8 @@ class Task(object):
             return False
 
     def task_kick_ball_in_goal(self):
-        goal_x = self.world.goal.x
-        goal_y = self.world.goal.y
+        goal_x = 640
+        goal_y = 240
 
         # If we're happy with rotation to face goal, ungarb and kick the ball
         if self.rotate_to_alignment(goal_x, goal_y):
@@ -69,7 +69,7 @@ class Task(object):
 
         print("Need to moev this distance: ", distance)
 
-        if distance < 10:
+        if distance < 30:
             return True
         else:
             calculated_duration = self.calculate_motor_duration(distance)
@@ -85,10 +85,11 @@ class Task(object):
             return False
 
     def rotate_to_ball(self):
-        self.rotate_to_alignment(self._world.ball.x, self._world.ball.y)
+        print ("rotating ball")
+        return self.rotate_to_alignment(self._world.ball.x, self._world.ball.y)
 
     def move_to_ball(self):
-        self.move_to_coordinates(self._world.ball.x, self._world.ball.y)
+        return self.move_to_coordinates(self._world.ball.x, self._world.ball.y)
 
     def rotate_to_alignment(self, x, y):
         """
@@ -102,7 +103,7 @@ class Task(object):
 
         print("calculated angle is ", angle_to_rotate)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if 15 >= angle_to_rotate >= -15:
+        if 25 >= angle_to_rotate >= -25:
             print("We're happy with the angle, no more rotation")
             return True
         else:
@@ -135,12 +136,12 @@ class Task(object):
         :param angle_to_rotate: given in degrees
         """
         # crude angle -> duration conversion
-        duration = 100 + (abs(angle_to_rotate) * 7.1)
+        duration = 100 + (abs(angle_to_rotate) * 3.1)
 
         if angle_to_rotate < 0:
             duration = -duration
 
-        return duration
+        return -duration
 
     @staticmethod
     def calculate_motor_duration(distance):

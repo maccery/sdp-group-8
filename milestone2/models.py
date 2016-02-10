@@ -21,11 +21,15 @@ class Robot(object):
         """
         delta_x = target_x - self.x
         delta_y = target_y - self.y
-        theta_ball = atan2(delta_x, delta_y)
-        theta_ball = theta_ball * 180 / pi
+
+        theta_ball = atan2(delta_y, delta_x) + pi / 2
+        if theta_ball > pi:
+            theta_ball -= 2 * pi
+        theta_ball = theta_ball / 2 / pi * 360
+
         theta_robot = self.angle
         angle_to_rotate = theta_ball - theta_robot
-
+        print('angles:', theta_ball, theta_robot)
         if angle_to_rotate > 180:
             angle_to_rotate -= 360
         if angle_to_rotate < -180:

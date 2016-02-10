@@ -21,7 +21,6 @@ class Runner(object):
         """
         assert pitch in [0, 1]
         assert color in ['yellow', 'blue']
-        assert task in ['move_to_ball', ' kick_ball_in_goal', 'move_and_grab_balle']
         self.task = task
         self.pitch = pitch
 
@@ -73,7 +72,7 @@ class Runner(object):
                 self.world.update_positions(data)
 
                 # Only run the task every 20 cycles, this allows us to catch up with vision
-                if counter % 20 == 0:
+                if counter % 30 == 0:
                     self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
@@ -96,17 +95,17 @@ class Runner(object):
         print ("task is ", self.task)
         task_to_execute = None
         if self.task == 'task_move_to_ball':
-            task_to_execute = self.world.task.move_to_ball
+            task_to_execute = self.world.task.task_move_to_ball
         if self.task == 'task_kick_ball_in_goal':
-            task_to_execute = self.world.task.kick_ball_in_goal
+            task_to_execute = self.world.task.task_kick_ball_in_goal
         if self.task == 'task_move_and_grab_ball':
-            task_to_execute = self.world.task.move_and_grab_ball
+            task_to_execute = self.world.task.task_move_and_grab_ball
 
         # if the task has executed, this will return true and we set our task as complete
-        if task_to_execute():
-            self.task = None
-
-        print("Task completed ")
+        if task_to_execute:
+            if task_to_execute():
+                self.task = None
+                print("Task completed ")
 
     def save_calibrations(self):
         dump_calibrations(self.vision.calibrations, self.calib_file)
