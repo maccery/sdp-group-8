@@ -15,6 +15,9 @@ class Robot(object):
         This presumes the robot's angle given is the degrees from north, +clockwise.
         So "10 degrees", is 10 degrees clockwise from North
 
+        The co-ordinate system from the vision system goes 0->+ from left to right, and  0->+ as you go down, therefore
+        the maths is different
+
         :param target_x:
         :param target_y:
         :return: angle: +clockwise, in degrees, to rotate
