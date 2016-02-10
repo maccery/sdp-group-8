@@ -326,7 +326,7 @@ class Controller(Arduino):
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
-        cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))
+        cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
         self._write(cmd)
         return duration / 200
 

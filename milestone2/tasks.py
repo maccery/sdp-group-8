@@ -21,28 +21,39 @@ class Task(object):
     """
 
     def task_move_to_ball(self):
-
         print("move_to_ball command called")
         # If we're happy with ball rotation and movement stop
-        if self.rotate_to_ball() and self.move_to_ball():
-            return True
+        if self.rotate_to_ball():
+            return self.move_to_ball()
         else:
             return False
 
     def task_move_and_grab_ball(self):
-        self.rotate_to_alignment(self.world.ball.x, self.world.ball.y)
-        self.move_to_coordinates(self.world.ball.x, self.world.ball.y)
-        self.grab_ball()
+        # If we're happy with rotation and movement, grab the ball
+        if self.rotate_to_ball():
+            if self.move_to_ball():
+                return self.grab_ball()
+            return False
+        # Otherwise return false, and get more data from vision
+        else:
+            return False
 
     def task_kick_ball_in_goal(self):
-
         goal_x = self.world.goal.x
         goal_y = self.world.goal.y
 
-        # Turn and face the goal, then kick the ball
-        self.rotate_to_alignment(goal_x, goal_y)
-        self.ungrab_ball()
-        self.kick_ball()
+        # If we're happy with rotation to face goal, ungarb and kick the ball
+        if self.rotate_to_alignment(goal_x, goal_y):
+            if self.ungrab_ball():
+                return self.kick_ball()
+            return False
+        # Otherwise return false, and get more data from vision
+        else:
+            return False
+
+    """
+    Smaller tasks
+    """
 
     def move_to_coordinates(self, x, y):
         """
@@ -65,11 +76,12 @@ class Task(object):
             print ("RUnnin g for duration: ", calculated_duration)
 
             # Tell arduino to move for the duration we've calculated
-            self._communicate.move_duration(-calculated_duration)
+            self._communicate.move_duration(calculated_duration)
 
             # Wait until this task has completed
             print("We're sleeping for a bit while arudino gets it shit together", calculated_duration)
             time.sleep(calculated_duration / 1000)
+            # Returns false which means we'll get more data from vision first, run this function again, to verify ok
             return False
 
     def rotate_to_ball(self):
@@ -99,6 +111,7 @@ class Task(object):
             wait_time = self._communicate.turn(duration)
             print("We're sleeping for a bit while arudino gets it shit together", wait_time)
             time.sleep(abs(wait_time))
+            # Returns false which means we'll get more data from vision first, run this function again, to verify ok
             return False
 
     def ungrab_ball(self):

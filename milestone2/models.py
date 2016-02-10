@@ -7,41 +7,42 @@ class Robot(object):
         self.is_busy = False
         self.x = x
         self.y = y
-        self.angle = angle # degrees from the north +clockwise, -anticlockwise. in degrees please
+        self.angle = angle  # degrees from the north. 0 being north, +clockwise, -anticlockwise
 
-    def get_rotation_to_point(self, x, y):
+    def get_rotation_to_point(self, target_x, target_y):
         """
         Calculates the rotation required to achieve alignment with given co-ordinates.
         This presumes the robot's angle given is the degrees from north, +clockwise.
         So "10 degrees", is 10 degrees clockwise from North
 
-        :param target_coordinates:
-        :return: angle +clockwise, in degrees
+        :param target_x:
+        :param target_y:
+        :return: angle: +clockwise, in degrees, to rotate
         """
-        delta_x = x - self.x
-        delta_y = y - self.y
+        delta_x = target_x - self.x
+        delta_y = target_y - self.y
         theta_ball = atan2(delta_x, delta_y)
         theta_ball = theta_ball * 180 / pi
         theta_robot = self.angle
-        delta_angle = theta_ball - theta_robot
+        angle_to_rotate = theta_ball - theta_robot
 
-        if delta_angle > 180:
-            delta_angle -= 360
-        if delta_angle < -180:
-            delta_angle += 360
+        if angle_to_rotate > 180:
+            angle_to_rotate -= 360
+        if angle_to_rotate < -180:
+            angle_to_rotate += 360
 
-        return delta_angle
+        return angle_to_rotate
 
-    def get_displacement_to_point(self, x, y):
+    def get_displacement_to_point(self, target_x, target_y):
         """
         Uses the euclidean distance to calculate the displacement between this robot and a target co-ordinates
 
-        :param target_coordinates:
+        :param x:
+        :param y:
         :return: displacement
         """
-
-        delta_x = x - self.x
-        delta_y = y - self.y
+        delta_x = target_x - self.x
+        delta_y = target_y - self.y
         displacement = hypot(delta_x, delta_y)
 
         return displacement
@@ -65,7 +66,6 @@ class World(object):
     """
 
     def __init__(self, pitch_num):
-        # self._pitch = Pitch(pitch_num)
         self._ball = Ball(0, 0)
         self._our_robot = Robot(0, 0, 0)
         self._task = Task(self)
@@ -84,16 +84,12 @@ class World(object):
         return self._task
 
     def update_positions(self, pos_dict):
-        ''' This method will update the positions of the pitch objects
-            that it gets passed by the vision system '''
-
-        # if pos_dict['ball']['center']:
-        #  pos_dict['ball']['center'] = (pos_dict['ball']['center'][0], self.pitch.height - pos_dict['ball']['center'][1])
-
-        # for robot in pos_dict['robots']:
-        #  robot['center'] = (robot['center'][0], self.pitch.height - robot['center'][1])
-
-        # Index may need changing depending on which robot is there
+        """
+        This method will update the positions of the pitch objects
+            that it gets passed by the vision system
+        :param pos_dict:
+        :return:
+        """
         for robot in pos_dict['robots']:
             if robot['team'] == 'yellow' and robot['group'] == 'green':
                 self.our_robot.x = robot['center'][0]

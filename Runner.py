@@ -72,8 +72,8 @@ class Runner(object):
                 # Update our world with the positions of robot and ball
                 self.world.update_positions(data)
 
-                # wait for vision to update, then run the task
-                if counter % 10 == 0:
+                # Only run the task every 20 cycles, this allows us to catch up with vision
+                if counter % 20 == 0:
                     self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
@@ -102,6 +102,7 @@ class Runner(object):
         if self.task == 'task_move_and_grab_ball':
             task_to_execute = self.world.task.move_and_grab_ball
 
+        # if the task has executed, this will return true and we set our task as complete
         if task_to_execute():
             self.task = None
 
