@@ -3,53 +3,46 @@ from multiprocessing import Value, Process, Pipe
 import struct
 import itertools
 import time
+from milestone2.logger import Logger
 import atexit
 from lib.math.util import convert_angle, get_duration
 import numpy as np
 
 # polynomial approximating low angle durations
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
-LOG_FILE = None
 
-def log_write(msg, flush=False):
-    msg_format = "[{time:.3f}] {msg}\n"
-    msg = msg.replace('\r', '\\r').replace('\n', '\\n')
-    LOG_FILE.write(msg_format.format(time=time.time(), msg=msg))
-    LOG_FILE.flush()
 
 def send_msg(s, msg, timeout, retries, ack):
-    global LOG_FILE
-    if not LOG_FILE:
-        # Make a new log file for this attempt
-        LOG_FILE = open("msg_log_{0}.log".format(int(time.time())), 'w+')
     buff = ''
     for i in range(retries):
         s.write(msg)
-        log_write("Sending out '{0}' to arduino, retry {1}".format(msg, i))
+        Logger.log_write("Sending out '{0}' to arduino, retry {1}".format(msg, i))
         s.flush()
         start_time = time.time()
         end_time = time.time()
         while end_time - start_time < timeout:
             r = s.readline()
-            log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r, timeout - time.time() + start_time))
+            Logger.log_write("Got back '{0}' from arduino, time left till timeout: {1:f}s".format(r,
+                                                                                           timeout - time.time() + start_time))
             buff += r
             if r:
                 print 'Got msg "{0}" from upstream'.format(r)
                 if 'FAIL' in r:
                     print 'Found failure condition in response, resending'
-                    log_write("Matched failure condition, resending")
+                    Logger.log_write("Matched failure condition, resending")
                     break
 
                 if ack in buff:
                     print 'Found ACK condition in response, accepting'
-                    log_write("Found ACK condition, accepting")
+                    Logger.log_write("Found ACK condition, accepting")
                     break
             end_time = time.time()
         if ack in buff:
             return True
     else:
-        log_write("no msg was ack'd, giving up")
+        Logger.log_write("no msg was ack'd, giving up")
         return False
+
 
 def ready_waiter(s, avail, timeout, retries=None):
     if avail.value == 1:
@@ -63,6 +56,7 @@ def ready_waiter(s, avail, timeout, retries=None):
     print 'Arduino not ready :/'
     avail.value = 0
     return False
+
 
 class MockSerial(object):
     def __init__(self, *args, **kwargs):
@@ -114,7 +108,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             return
         if time.time() - t > timeout * 4:
             print 'Got msg {0} which is {1:.2f}s old, rejecting'.format(msg, time.time() - t)
-            log_write("Rejected msg '{0}' as it was {1:.2f}s old".format(msg, time.time() - t))
+            Logger.log_write("Rejected msg '{0}' as it was {1:.2f}s old".format(msg, time.time() - t))
             continue
         print 'Trying to send msg "{0}"'.format(msg)
 
@@ -128,9 +122,11 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             print 'msg properly sent to arduino'
             continue
 
+
 class Arduino(object):
     """ Basic class for Arduino communications. """
-    def __init__(self, port='/dev/ttyUSB0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
+
+    def __init__(self, port='/dev/ttyACM0', rate=115200, timeOut=0.06, comms=1, debug=False, is_dummy=False,
                  ack_tries=4):
         self.port = port
         self.rate = rate
@@ -190,8 +186,8 @@ class Controller(Arduino):
         'run_engine': '{ts}R{0}{1}{2}{3}{te}',
         'stop': '{ts}S{0}{1}{parity}{te}',
         'send_binary': '{ts}B{0}0{parity}{te}',
-	'grab': '{ts}G{0}{1}{parity}{te}',
-	'ungrab': '{ts}U{0}{1}{parity}{te}'
+        'grab': '{ts}G{0}{1}{parity}{te}',
+        'ungrab': '{ts}U{0}{1}{parity}{te}'
     }
 
     MAX_POWER = 1
@@ -237,40 +233,40 @@ class Controller(Arduino):
 
         if power is None:
             power = 1.0
-        #power = int(abs(power) * 255.)
-        #cmd = self.COMMANDS['kick']
-        #cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
-        #self._write(cmd)
-	self.run_motor(3, 0.2, 800)
-	time.sleep(1)
-	self.run_motor(3, -1.0*power, (250/power))	
-	time.sleep(2)
-	self.run_motor(3, 0.15, 1000)
-	time.sleep(2)
-	self.run_motor(3, 0.15, 400)
+        # power = int(abs(power) * 255.)
+        # cmd = self.COMMANDS['kick']
+        # cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
+        # self._write(cmd)
+        self.run_motor(3, 0.2, 800)
+        time.sleep(1)
+        self.run_motor(3, -1.0 * power, (250 / power))
+        time.sleep(2)
+        self.run_motor(3, 0.15, 1000)
+        time.sleep(2)
+        self.run_motor(3, 0.15, 400)
         return 4
 
     def grab(self):
-	"""
-	Grabs the ball
-	:return: duration it will be blocked
-	"""
-	
-	cmd = self.COMMANDS['grab']
-	cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
-	self._write(cmd)
-	return 0.2
+        """
+        Grabs the ball
+        :return: duration it will be blocked
+        """
+
+        cmd = self.COMMANDS['grab']
+        cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+        self._write(cmd)
+        return 0.2
 
     def ungrab(self):
-	"""
-	Ungrabs the ball
-	:return: duration it will be blocked
-	"""
-	
-	cmd = self.COMMANDS['ungrab']
-	cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
-	self._write(cmd)
-	return 0.2
+        """
+        Ungrabs the ball
+        :return: duration it will be blocked
+        """
+
+        cmd = self.COMMANDS['ungrab']
+        cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
+        self._write(cmd)
+        return 0.2
 
     def move_distance(self, x=None, y=None, power=1):
         """
@@ -330,9 +326,9 @@ class Controller(Arduino):
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
-        cmd = self.get_command(self.COMMANDS['move_straight'], (-duration, 'h'))
+        cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
         self._write(cmd)
-        return duration * 0.001 + 0.07
+        return duration / 200
 
     def stop(self):
         cmd = self.get_command(self.COMMANDS['stop'], (ord('T'), 'B'), (ord('O'), 'B'))
@@ -340,55 +336,19 @@ class Controller(Arduino):
         return 0.01
 
     def turn(self, duration):
-	"""
-	Turns the robot for a duration of time given. Positive is counterclockwise.
-
-	:param duration: given in milliseconds
-	:return: duration the Arduino is blocked for
-	"""
-
-	power = self.MAX_POWER if duration >= 0 else -self.MAX_POWER
-	cmd = self.COMMANDS['turn']
-        cmd = self.get_command(cmd, (duration, 'h'))  # short
-        self._write(cmd)
-	return (duration/1000)
-
-    def turn_clockwise(self, angle):
         """
-        Turns the robot at a specific angle, positive is clockwise
+        Turns the robot for a duration of time given. Positive is counterclockwise.
 
-        :param angle: given in radians
-        :return: duation the Ardunio to be blocked for
+        :param duration: given in milliseconds
+        :return: duration the Arduino is blocked for
         """
-	
-        angle = convert_angle(-angle)  # so it's in [-pi;pi] range
-        # if angle is positive move clockwise, otw just inverse it
-        power = self.MAX_POWER if angle >= 0 else -self.MAX_POWER
-	angle = abs(angle)
 
-	print(angle, power)
-        #angle = abs(angle)
-        #if angle < 0.67:
-        #    duration = int(angle_poly(angle) * 1000)
-        #else:
-            # pi/2 -> 200, pi/4 -> 110
-            # ax+b=y, api/2+b = 200, api/4+b=150, b=20, a=360/pi
-            # duration = int(360.0 / 3.14 * angle + 20.0)
-
-	# NOTE: Changed angle to duration purely for milestone 1
-	
-	# Linear approximation from an excel spreadsheet
-	# See https://docs.google.com/spreadsheets/d/1rp2-0vzFRZAXeeyeIC9A_tmJ2cnqPbT3OTt7SuzoY84/edit?usp=sharing
-	duration = 160.044 * (angle + 0.405)
-	duration = 0 if duration < 0 else duration
-
-	print "Duration:", duration
-        duration = -duration if power < 0 else duration
-        print duration
+        power = self.MAX_POWER if duration >= 0 else -self.MAX_POWER
         cmd = self.COMMANDS['turn']
         cmd = self.get_command(cmd, (duration, 'h'))  # short
         self._write(cmd)
-        return duration * 0.001 + 0.07
+
+        return duration / 200
 
     def run_motor(self, id, power, duration):
         """
@@ -407,7 +367,6 @@ class Controller(Arduino):
 
         return float(duration) / 1000.0
 
-
     def send_binary(self, binary_file, frequency):
         """
         Given a binary file location, sends the data to robot
@@ -421,8 +380,8 @@ class Controller(Arduino):
         file = open(binary_file, "rb")
         try:
             byte = file.read(1)
-	    while byte != "":
-            # Send the content
+            while byte != "":
+                # Send the content
                 cmd = self.COMMANDS['send_binary']
                 cmd = self.get_command(cmd, (ord(byte), 'B'))
                 self._write(cmd)
@@ -430,6 +389,5 @@ class Controller(Arduino):
                 byte = file.read(1)
         finally:
             file.close()
-	
-        return 5000
 
+        return 5000

@@ -1,0 +1,60 @@
+{
+	"ball": {
+		"hue1_low": 0,
+		"sat_low": 190,
+		"val_low": 108,   
+		"hue1_high": 5,
+		"sat_high": 255,
+		"val_high": 255,
+		"hue2_low": 175,
+		"hue2_high": 180, 
+		"blur": 2,
+		"morph_open": 3,
+		"morph_close": 3
+	},
+    "pink1": {
+    	"hue1_low": 27,
+		"sat_low": 150,
+		"val_low": 106,   
+		"hue1_high": 255,
+		"sat_high": 255,
+		"val_high": 255,
+		"hue2_low": 175,
+		"hue2_high": 180, 
+		"blur": 2,
+		"morph_open": 3,
+		"morph_close": 3
+    },
+    "blue": {
+    	"hue1_low": 70,
+		"sat_low": 130,
+		"val_low": 100,   
+		"hue1_high": 136,
+		"sat_high": 255,
+		"val_high": 255
+    },
+    "yellow": {
+    	"hue1_low": 20,
+		"sat_low": 180,
+		"val_low": 115,   
+		"hue1_high": 40,
+		"sat_high": 255,
+		"val_high": 255
+    },
+    "green": {
+    	"hue1_low": 50,
+		"sat_low": 100,
+		"val_low": 100,   
+		"hue1_high": 90,
+		"sat_high": 255,
+		"val_high": 255
+    },
+    "pink": {
+    	"hue1_low": 150,
+		"sat_low": 0,
+		"val_low": 0,   
+		"hue1_high": 255,
+		"sat_high": 255,
+		"val_high": 255
+    }
+}
