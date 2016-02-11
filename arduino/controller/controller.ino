@@ -17,8 +17,8 @@
 
 #define BinaryCheckerI2CAddress 69
 
-#define MOVE_POWER_LEVEL_LEFT 0.95
-#define MOVE_POWER_LEVEL_RIGHT 0.85
+#define MOVE_POWER_LEVEL_LEFT 1
+#define MOVE_POWER_LEVEL_RIGHT 0.9
 
 
 #define BUFF_SIZE 32
@@ -311,13 +311,13 @@ void stop_engines() {
 }
 
 void grab() {
-  motors.run_motor(LEFT_GRABBER, 0.15, uint16_t(float(150)), -1);
-  motors.run_motor(RIGHT_GRABBER, -0.3, uint16_t(float(150)), -1);
+  motors.run_motor(LEFT_GRABBER, 0.2, uint16_t(float(200)), -1);
+  motors.run_motor(RIGHT_GRABBER, -0.3, uint16_t(float(200)), -1);
 }
 
 void ungrab() {
-  motors.run_motor(LEFT_GRABBER, -0.15, uint16_t(float(150)), -1);
-  motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(150)), -1);
+  motors.run_motor(LEFT_GRABBER, -0.2, uint16_t(float(200)), -1);
+  motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(200)), -1);
 }
 
 /*
