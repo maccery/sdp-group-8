@@ -1,7 +1,6 @@
-from milestone2.models import World, Task
-from milestone2.logger import Logger
+from planning.models import World, Task
+from planning.logger import Logger
 from postprocessing import PostProcessing
-from multiprocessing import Process
 from vision.vision import Vision, GUI
 from vision.vision import dump_calibrations
 from vision import tools
