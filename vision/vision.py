@@ -83,6 +83,7 @@ class Vision(object):
         return contours[np.argmax(areas)] if len(areas) > 0 else None
 
     def get_contour_center(c):
+
         M = cv2.moments(c)
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 

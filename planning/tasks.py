@@ -20,6 +20,33 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
+    def task_rotate_and_grab(self):
+        # rotate to face the ball
+        if self.rotate_to_ball():
+            # wait till we have the ball
+            if self.ball_received():
+                # grab the ball
+                return self.grab_ball()
+            else:
+                return False
+        else:
+            return False
+
+    # Assuming we're facing the right direction
+    def task_grab_rotate_kick(self):
+        # grab the ball we've just be given
+        if self.grab_ball():
+            # rotate to face the other robot
+            teammate_x = 5
+            teammate_y = 5
+            if self.rotate_to_alignment(teammate_x, teammate_y):
+                # kick ball to teammate
+                return self.kick_ball()
+            else:
+                return False
+        else:
+            return False
+
     def task_move_to_ball(self):
         print("move_to_ball command called")
         # If we're happy with ball rotation and movement stop
@@ -129,6 +156,19 @@ class Task(object):
         wait_time = self._communicate.kick()
         time.sleep(wait_time)
         return True
+
+
+    '''
+    Helper methods
+    '''
+    def ball_received(self):
+        # calculate displacement from us to ball
+        distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
+
+        if distance < 30:
+            return True
+        else:
+            return False
 
     @staticmethod
     def calculate_motor_duration_turn(angle_to_rotate):
