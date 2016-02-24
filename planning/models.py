@@ -57,20 +57,23 @@ class Robot(object):
 
 
 class Ball(object):
-    def __init__(self, x, y, speed=None):
+    def __init__(self, x, y, speed=0):
         self.x = x
         self.y = y
         self.speed = speed
-        self.last_update_time = lambda: int(round(time.time()))
+        self.last_update_time = now()
+
 
     def update_speed(self, x, y):
         # calculate the speed the ball is moving at, based on the last time we updated the speed and the distnance moved
 
-        time_since_last_updated = time - self.last_update_time
-        self.speed = calculate_speed(self.ball.x, self.ball.y, x, y, time_since_last_updated)
+        time_since_last_updated = now() - self.last_update_time
+        self.speed = calculate_speed(self.x, self.y, x, y, time_since_last_updated)
 
         # time in seconds
-        self.last_update_time = lambda: int(round(time.time()))
+        self.x = x
+        self.y = y
+        self.last_update_time = now()
 
 class Goal(object):
     def __init__(self, x, y):
@@ -127,9 +130,8 @@ class World(object):
         if pos_dict['ball']:
             # Before we update the positions, we can calculate the velocity of the ball by comparing it with its
             # previous position
-            self.ball.update_speed(self.ball.x, self.ball.y)
-
-            self.ball.x = pos_dict['ball']['center'][0]
-            self.ball.y = pos_dict['ball']['center'][1]
+            new_x = pos_dict['ball']['center'][0]
+            new_y = pos_dict['ball']['center'][1]
+            self.ball.update_speed(new_x, new_y) # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
             # print(self.ball.x, self.ball.y)

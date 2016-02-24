@@ -1,7 +1,9 @@
 from math import hypot
+import time
 
+def now():
+    return int(round(time.time()))
 
-@staticmethod
 def calculate_speed(start_x, start_y, end_x, end_y, time):
     """
     Given co-ordinates and the time taken, it will return the speed. The function is independent on units; the
@@ -20,6 +22,7 @@ def calculate_speed(start_x, start_y, end_x, end_y, time):
     delta_y = end_y - start_y
     displacement = hypot(delta_x, delta_y)
 
-    speed = displacement / time
-
-    return speed
+    if time == 0:
+        return displacement
+    else:
+        return displacement / time

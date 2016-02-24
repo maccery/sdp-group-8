@@ -3,7 +3,7 @@ from multiprocessing import Value, Process, Pipe
 import struct
 import itertools
 import time
-from milestone2.logger import Logger
+from planning.logger import Logger
 import atexit
 from lib.math.util import convert_angle, get_duration
 import numpy as np
