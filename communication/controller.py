@@ -78,17 +78,20 @@ class MockSerial(object):
 
 def msg_sender(pipe, avail, port, rate, timeout, retries):
     # establish serial connection
-    s = serial.Serial(port, rate, timeout=timeout)
-    # s = MockSerial(port, rate, timeout=timeout)
-    print 'Established connection, commencing initial wait for handshakes(5s)'
-    time.sleep(5)
-    print 'Connection should be up now, testing with ready'
-    if not ready_waiter(s, avail, timeout):
-        print 'Arduino not ready, what is going on??'
-        print 'waiting more'
-        time.sleep(10)
+    try:
+        s = serial.Serial(port, rate, timeout=timeout)
+        print "Established connection, commencing initial wait for handshakes(5s)"
+        time.sleep(5)
+        print 'Connection should be up now, testing with ready'
         if not ready_waiter(s, avail, timeout):
-            raise Exception("Arduino down for good")
+            print 'Arduino not ready, what is going on??'
+            print 'Waiting another 10 seconds'
+            time.sleep(10)
+            if not ready_waiter(s, avail, timeout):
+                raise Exception("Arduino down for good.")
+
+    except IOError:
+        print "Could not open port. Is Arudino running?"
 
     # we should be fine now
     while True:
