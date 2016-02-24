@@ -39,7 +39,8 @@ class Task(object):
             # rotate to face the other robot
             if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
                 # kick ball to teammate
-                return self.kick_ball()
+                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
+                self.kick_ball(distance_to_kick=distance)
             else:
                 return False
         else:
@@ -150,8 +151,13 @@ class Task(object):
         time.sleep(wait_time)
         return True
 
-    def kick_ball(self):
-        wait_time = self._communicate.kick()
+    def kick_ball(self, distance_to_kick=None):
+        if distance_to_kick:
+            power = self.calculate_kick_power(distance_to_kick)
+        else:
+            power = 1
+
+        wait_time = self._communicate.kick(power)
         time.sleep(wait_time)
         return True
 
@@ -167,6 +173,17 @@ class Task(object):
             return True
         else:
             return False
+
+    @staticmethod
+    def calculate_kick_power(distance):
+        """
+        Given a distance to kick, crudely calculates the power for the kicker; this is only used for ball kicking atm
+        :param distance:
+        """
+        # power is between 0.0 and 1.0, assume distance given is between 0.0 and 2.0. this function needs improving
+        power = (distance / 2)
+
+        return power
 
     @staticmethod
     def calculate_motor_duration_turn(angle_to_rotate):
