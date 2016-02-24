@@ -75,6 +75,7 @@ class World(object):
     def __init__(self, pitch_num):
         self._ball = Ball(0, 0)
         self._our_robot = Robot(0, 0, 0)
+        self._teammate = Robot(0, 0, 0)
         self._task = Task(self)
         self._goal = Goal(0, 0)
 
@@ -85,6 +86,10 @@ class World(object):
     @property
     def our_robot(self):
         return self._our_robot
+
+    @property
+    def teammate(self):
+        return self._teammate
 
     @property
     def task(self):
@@ -102,6 +107,11 @@ class World(object):
                 self.our_robot.x = robot['center'][0]
                 self.our_robot.y = robot['center'][1]
                 self.our_robot.angle = robot['angle']
+
+            if robot['team'] == 'blue' and robot['group'] == 'blue':
+                self.teammate.x = robot['center'][0]
+                self.teammate.y = robot['center'][1]
+                self.teammate.angle = robot['angle']
 
         if pos_dict['ball']:
             self.ball.x = pos_dict['ball']['center'][0]

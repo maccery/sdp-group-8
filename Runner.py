@@ -99,9 +99,14 @@ class Runner(object):
             task_to_execute = self.world.task.task_kick_ball_in_goal
         if self.task == 'task_move_and_grab_ball':
             task_to_execute = self.world.task.task_move_and_grab_ball
+        if self.task == 'task_rotate_and_grab':
+            task_to_execute = self.world.task.task_rotate_and_grab
+        if self.task == 'task_grab_rotate_kick':
+            task_to_execute = self.world.task.task_grab_rotate_kick
 
-        # if the task has executed, this will return true and we set our task as complete
-        if task_to_execute:
+        # if there's a task to do, let's try it
+        if self.task:
+            # if it's executed fine, then we've completed the task. otherwise we're going to loop round and try again
             if task_to_execute():
                 self.task = None
                 print("Task completed ")

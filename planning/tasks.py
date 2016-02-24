@@ -37,9 +37,7 @@ class Task(object):
         # grab the ball we've just be given
         if self.grab_ball():
             # rotate to face the other robot
-            teammate_x = 5
-            teammate_y = 5
-            if self.rotate_to_alignment(teammate_x, teammate_y):
+            if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
                 # kick ball to teammate
                 return self.kick_ball()
             else:
