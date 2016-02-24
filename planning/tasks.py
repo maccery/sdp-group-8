@@ -23,10 +23,14 @@ class Task(object):
     def task_rotate_and_grab(self):
         # rotate to face the ball
         if self.rotate_to_ball():
-            # wait till we have the ball
-            if self.ball_received():
-                # grab the ball
-                return self.grab_ball()
+            # wait till ball has stopped
+            if self._world.ball.speed == 0:
+                # move to the ball
+                if self.task_move_to_ball():
+                    # grab the ball
+                    return self.grab_ball()
+                else:
+                    return False
             else:
                 return False
         else:

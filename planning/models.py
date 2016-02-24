@@ -1,6 +1,7 @@
 from math import cos, sin, hypot, pi, atan2
 from planning.tasks import Task
-
+from helper import *
+import time
 
 class Robot(object):
     def __init__(self, x, y, angle):
@@ -56,10 +57,20 @@ class Robot(object):
 
 
 class Ball(object):
-    def __init__(self, x, y):
+    def __init__(self, x, y, speed=None):
         self.x = x
         self.y = y
+        self.speed = speed
+        self.last_update_time = lambda: int(round(time.time()))
 
+    def update_speed(self, x, y):
+        # calculate the speed the ball is moving at, based on the last time we updated the speed and the distnance moved
+
+        time_since_last_updated = time - self.last_update_time
+        self.speed = calculate_speed(self.ball.x, self.ball.y, x, y, time_since_last_updated)
+
+        # time in seconds
+        self.last_update_time = lambda: int(round(time.time()))
 
 class Goal(object):
     def __init__(self, x, y):
@@ -114,6 +125,10 @@ class World(object):
                 self.teammate.angle = robot['angle']
 
         if pos_dict['ball']:
+            # Before we update the positions, we can calculate the velocity of the ball by comparing it with its
+            # previous position
+            self.ball.update_speed(self.ball.x, self.ball.y)
+
             self.ball.x = pos_dict['ball']['center'][0]
             self.ball.y = pos_dict['ball']['center'][1]
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)

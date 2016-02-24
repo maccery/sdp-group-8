@@ -16,9 +16,6 @@ class TestRotation(unittest.TestCase):
     Tests the get_rotation_to_point function of the robot to ensure it returns the correct angle
     """
 
-    def test_one(self):
-        self.assertEqual("hey", heyy")
-
     def test_calculating_angle_three(self):
         angle_in_degrees = 90
         robot = Robot(0, 0, angle_in_degrees)
