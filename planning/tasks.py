@@ -34,17 +34,17 @@ class Task(object):
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
-        # grab the ball we've just be given
-        if self.grab_ball():
-            # rotate to face the other robot
-            if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                # kick ball to teammate
-                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
-                self.kick_ball(distance_to_kick=distance)
-            else:
+        if self.ball_received():
+            # grab the ball we've just be given
+            if self.grab_ball():
+                # rotate to face the other robot
+                if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                    # kick ball to teammate
+                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
+                    self.kick_ball(distance_to_kick=distance)
                 return False
-        else:
             return False
+        return False
 
     def task_move_to_ball(self):
         print("move_to_ball command called")

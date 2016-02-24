@@ -73,6 +73,8 @@ ct.kick(power)
 # Models
 Our system is made up of simply four models: `Ball`, `World`, `Robot` and `Goal`.
 
+In `models.py`, the function `update_positions` takes the data from the vision system and saves the locations of the robot.
+
 # Tasks, vision and movement
 These commands take data from the vision system and integrate it with our lower-level Arduino commands, allowing
 the robot to perform actual tasks.
@@ -95,11 +97,22 @@ repeat the process of rotation - this means at each stage of movement, it will r
 It will finally stop when within a displacement of 30 (arbitrary units) of the ball.
 
 ## Move and grab ball
-This is the same as ``task_move_to_ball`` except that when it reaches the ball, it opens the grabber.
+Run ``task_move_and_grab_ball``. This is the same as ``task_move_to_ball`` except that when it reaches the ball, it opens the grabber.
 
 ## Kick ball in goal
 Given the goal's co-ordinates, it will keep rotating until it's happy with the angle, based on vision data, and then will
 open the grabber and kick the ball (it assumes the ball is already caught).
+
+
+## Receiving and grabbing
+Run the command ``task_rotate_and_grab``. This will rotate the robot to our teammate, and grab the ball when it's within reach.
+
+## Receive, turn and pass
+Run the command ``task_grab_rotate_kick``. This will wait till we've received the ball, then grab it, then rotate our robot to the teammate,
+then kick it at them. The function that calculates how hard to kick it is in ``tasks.py``, called `calculate_kick_power`.
+
+## Intercepting
+One way to get the robot 'intercepting' the ball, is simply to tell it to move and grab the ball. Simply run ``task_move_and_grab_ball``.
 
 # Tests
 We have written some tests which are contained within the `tests` folder. These test things like our angle calculation and our
