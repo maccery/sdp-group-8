@@ -20,6 +20,9 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
+    def task_vision(self):
+	pass
+
     def task_rotate_and_grab(self):
         # rotate to face the ball
         if self.rotate_to_ball():

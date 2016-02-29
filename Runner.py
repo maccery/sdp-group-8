@@ -93,6 +93,8 @@ class Runner(object):
         # Only execute a task if the robot isn't currently in the middle of doing one
         print ("task is ", self.task)
         task_to_execute = None
+        if self.task == 'task_vision':
+            task_to_execute = self.world.task.task_vision
         if self.task == 'task_move_to_ball':
             task_to_execute = self.world.task.task_move_to_ball
         if self.task == 'task_kick_ball_in_goal':
