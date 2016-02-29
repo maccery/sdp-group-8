@@ -299,6 +299,8 @@ void turn(uint8_t a, uint8_t b) {
   if (READY == 0) return;
 
   int16_t d = reint(a, b);
+  motors.run_motor(LEFT_GRABBER, 0.1, uint16_t(float(1000)), -1);
+  motors.run_motor(RIGHT_GRABBER, -0.1, uint16_t(float(1000)), -1);
   return move_bot(-d, d, 0, 1.0, 1.0);
 }
 
@@ -311,13 +313,13 @@ void stop_engines() {
 }
 
 void grab() {
-  motors.run_motor(LEFT_GRABBER, 0.2, uint16_t(float(200)), -1);
-  motors.run_motor(RIGHT_GRABBER, -0.3, uint16_t(float(200)), -1);
+  motors.run_motor(LEFT_GRABBER, 0.9, uint16_t(float(200)), -1);
+  motors.run_motor(RIGHT_GRABBER, -1, uint16_t(float(200)), -1);
 }
 
 void ungrab() {
-  motors.run_motor(LEFT_GRABBER, -0.2, uint16_t(float(200)), -1);
-  motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(200)), -1);
+  motors.run_motor(LEFT_GRABBER, -0.2, uint16_t(float(300)), -1);
+  motors.run_motor(RIGHT_GRABBER, 0.3, uint16_t(float(300)), -1);
 }
 
 /*
