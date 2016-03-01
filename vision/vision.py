@@ -18,12 +18,12 @@ class Vision(object):
 
     def __init__(self, file_path=None):
         self.camera = Camera()
-        self.camera.setup_camera()
 
         if file_path is None:
             self.calibrations = get_calibrations()
         else:
             self.calibrations = get_calibrations(file_path)
+        self.camera.setup_camera(self.calibrations['auto_calibration'])
         # croppings = self.calibrations['croppings']
         self.ball_queue = []
         # assert croppings['y2'] - croppings['y1'] == MAX_HEIGHT
@@ -281,11 +281,42 @@ class Camera(object):
         self.c_matrix = radial_data['camera_matrix']
         self.dist = radial_data['dist']
 
-    def setup_camera(self):
-        self.capture.set(cv2.CAP_PROP_BRIGHTNESS, 0.5)
-        self.capture.set(cv2.CAP_PROP_CONTRAST, 0.5)
-        self.capture.set(cv2.CAP_PROP_SATURATION, 0.5)
+    def setup_camera(self, camera_calibration):
+	print("Calibrating...")
+        
+	self.capture.set(cv2.CAP_PROP_SATURATION, 0.5)
         self.capture.set(cv2.CAP_PROP_HUE, 0.5)
+        self.capture.set(cv2.CAP_PROP_CONTRAST, 0.5)
+        
+	current_mean = 0
+	current_stddev = 0
+	current_iteration = 0	
+	brightness_settings = 0.5
+	contrast_settings = 0.5
+	
+	while (current_iteration < camera_calibration['max_iterations']):
+		current_iteration += 1
+		frame = self.get_frame()
+		grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		current_mean = np.mean(grey)
+		current_stddev = np.std(grey)
+		print('Iteration', current_iteration, 'Max iterations', camera_calibration['max_iterations'])
+		print('Current mean', current_mean, 'Goal', camera_calibration['mean_target'], 'Camera brightness', brightness_settings)
+		print('Current std. dev.', current_stddev, 'Goal', camera_calibration['std_dev_target'], 'Camera contrast', contrast_settings)
+
+		if current_mean < camera_calibration['mean_target']:
+			brightness_settings += camera_calibration['step']
+		else:
+			brightness_settings -= camera_calibration['step']
+		brightness_settings = min(1.0, max(0, brightness_settings))
+		self.capture.set(cv2.CAP_PROP_BRIGHTNESS, brightness_settings)
+
+		if current_stddev < camera_calibration['std_dev_target']:
+			contrast_settings += camera_calibration['step']
+		else:
+			contrast_settings -= camera_calibration['step']
+		contrast_settings = min(1.0, max(0, contrast_settings))
+		self.capture.set(cv2.CAP_PROP_CONTRAST, contrast_settings)
 
     def get_frame(self):
         status, frame = self.capture.read()
