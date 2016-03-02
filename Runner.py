@@ -49,8 +49,8 @@ class Runner(object):
         timer = time.clock()
 
         # wait 10 seconds for arduino to connect
-        print("waiting 10 seconds for Arduino to get its shit together")
-        time.sleep(10)
+        print("waiting 3 seconds for Arduino to get its shit together")
+        time.sleep(3)
         Logger.log_write("test")
         try:
             c = True
@@ -135,5 +135,4 @@ if __name__ == '__main__':
     #     c = Runner(
     #         pitch=int(args.pitch), color=args.color, our_side=args.side, attack_defend='attack', comms=0).run()
     # else:
-    c = Runner(
-            pitch=int(args.pitch), color=args.color, task=args.task).run()
+    c = Runner(pitch=int(args.pitch), color=args.color, task=args.task).run()

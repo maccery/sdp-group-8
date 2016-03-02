@@ -1,6 +1,6 @@
-from models import *
-from communication.controller import Controller
 import time
+
+from communication.controller import Controller
 
 
 class Task(object):
@@ -49,8 +49,12 @@ class Task(object):
                     # rotate to face the other robot
                     if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
                         # kick ball to teammate
-                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
-                        self.kick_ball(distance_to_kick=distance)
+                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                   self._world.teammate.y)
+                        if self.kick_ball(distance_to_kick=distance):
+                            # check ball reached teammate
+                            return self.ball_received_by_teammate()
+                        return False
                     return False
                 return False
             return False
@@ -68,7 +72,7 @@ class Task(object):
         # If we're happy with rotation and movement, grab the ball
         if self.rotate_to_ball():
             if self.move_to_ball():
-                #self.ungrab_ball()
+                # self.ungrab_ball()
                 return self.grab_ball()
             return False
         # Otherwise return false, and get more data from vision
@@ -175,13 +179,22 @@ class Task(object):
         time.sleep(wait_time)
         return True
 
-
     '''
     Helper methods
     '''
+
     def ball_received(self):
         # calculate displacement from us to ball
         distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
+
+        if distance < 30:
+            return True
+        else:
+            return False
+
+    def ball_received_by_teammate(self):
+        # calculate displacement from us to ball
+        distance = self._world.teammate.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
 
         if distance < 30:
             return True
