@@ -21,10 +21,9 @@ class Task(object):
     """
 
     def task_vision(self):
-	pass
+        pass
 
     def task_rotate_and_grab(self):
-        #self.ungrab_ball()
         # rotate to face the ball
         if self.rotate_to_ball():
             # wait till ball has stopped
@@ -32,7 +31,7 @@ class Task(object):
             if self._world.ball.speed < 5:
                 # move to the ball
                 if self.task_move_to_ball():
-                    # grab the ball
+                    self.ungrab_ball()
                     return self.grab_ball()
                 else:
                     return False
@@ -43,14 +42,16 @@ class Task(object):
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
-        if self.ball_received():
-            # grab the ball we've just be given
-            if self.grab_ball():
-                # rotate to face the other robot
-                if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                    # kick ball to teammate
-                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
-                    self.kick_ball(distance_to_kick=distance)
+        if self.move_to_ball():
+            if self.ball_received():
+                # grab the ball we've just be given
+                if self.grab_ball():
+                    # rotate to face the other robot
+                    if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                        # kick ball to teammate
+                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
+                        self.kick_ball(distance_to_kick=distance)
+                    return False
                 return False
             return False
         return False
@@ -103,13 +104,13 @@ class Task(object):
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
-        print("Need to moev this distance: ", distance)
+        print("Need to move this distance: ", distance)
 
-        if distance < 20:
+        if distance < 30:
             return True
         else:
             calculated_duration = self.calculate_motor_duration(distance)
-            print ("RUnnin g for duration: ", calculated_duration)
+            print ("Running for duration: ", calculated_duration)
 
             # Tell arduino to move for the duration we've calculated
             self._communicate.move_duration(calculated_duration)
@@ -139,8 +140,9 @@ class Task(object):
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         print("calculated angle is ", angle_to_rotate)
+        print("calculated distance is ", distance)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if (15 >= angle_to_rotate >= -15 and distance > 50) or (50 >= angle_to_rotate >= -50 and distance <= 30):
+        if (15 >= angle_to_rotate >= -15 and distance > 40) or (10 >= angle_to_rotate >= -10 and distance <= 40):
             print("We're happy with the angle, no more rotation")
             return True
         else:
