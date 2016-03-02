@@ -3,6 +3,7 @@ from planning.logger import Logger
 from postprocessing import PostProcessing
 from vision.vision import Vision, GUI
 from vision.vision import dump_calibrations
+import sys
 from vision import tools
 from cv2 import waitKey
 import cv2
@@ -55,7 +56,11 @@ class Runner(object):
         try:
             c = True
             # self.robot.ping()
+
             while c != 27:  # the ESC key
+                if self.task == None:
+                    self.task = sys.stdin.readline().strip()
+
                 t2 = time.time()
                 # change of time between frames in seconds
                 delta_time = t2 - timer
