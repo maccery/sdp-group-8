@@ -20,14 +20,18 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
+    def task_vision(self):
+        pass
+
     def task_rotate_and_grab(self):
         # rotate to face the ball
         if self.rotate_to_ball():
             # wait till ball has stopped
-            if self._world.ball.speed == 0:
+            print('ball speed', self._world.ball.speed)
+            if self._world.ball.speed < 5:
                 # move to the ball
                 if self.task_move_to_ball():
-                    # grab the ball
+                    self.ungrab_ball()
                     return self.grab_ball()
                 else:
                     return False
@@ -38,14 +42,16 @@ class Task(object):
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
-        if self.ball_received():
-            # grab the ball we've just be given
-            if self.grab_ball():
-                # rotate to face the other robot
-                if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                    # kick ball to teammate
-                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
-                    self.kick_ball(distance_to_kick=distance)
+        if self.move_to_ball():
+            if self.ball_received():
+                # grab the ball we've just be given
+                if self.grab_ball():
+                    # rotate to face the other robot
+                    if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                        # kick ball to teammate
+                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x, self._world.teammate.y)
+                        self.kick_ball(distance_to_kick=distance)
+                    return False
                 return False
             return False
         return False
@@ -62,6 +68,7 @@ class Task(object):
         # If we're happy with rotation and movement, grab the ball
         if self.rotate_to_ball():
             if self.move_to_ball():
+                #self.ungrab_ball()
                 return self.grab_ball()
             return False
         # Otherwise return false, and get more data from vision
@@ -97,13 +104,13 @@ class Task(object):
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
-        print("Need to moev this distance: ", distance)
+        print("Need to move this distance: ", distance)
 
         if distance < 30:
             return True
         else:
             calculated_duration = self.calculate_motor_duration(distance)
-            print ("RUnnin g for duration: ", calculated_duration)
+            print ("Running for duration: ", calculated_duration)
 
             # Tell arduino to move for the duration we've calculated
             self._communicate.move_duration(calculated_duration)
@@ -130,10 +137,12 @@ class Task(object):
         print ("robots coordinates", self._world.our_robot.x, self._world.our_robot.y)
         print("Rotate to face these co-ordinates: (", x, ",", y, ")")
         angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
+        distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         print("calculated angle is ", angle_to_rotate)
+        print("calculated distance is ", distance)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if 25 >= angle_to_rotate >= -25:
+        if (15 >= angle_to_rotate >= -15 and distance > 40) or (10 >= angle_to_rotate >= -10 and distance <= 40):
             print("We're happy with the angle, no more rotation")
             return True
         else:
@@ -151,6 +160,7 @@ class Task(object):
         return True
 
     def grab_ball(self):
+        print('grabbing')
         wait_time = self._communicate.grab()
         time.sleep(wait_time)
         return True
@@ -195,7 +205,7 @@ class Task(object):
         :param angle_to_rotate: given in degrees
         """
         # crude angle -> duration conversion
-        duration = 100 + (abs(angle_to_rotate) * 3.1)
+        duration = 100 + (abs(angle_to_rotate) * 5)
 
         if angle_to_rotate < 0:
             duration = -duration
@@ -210,5 +220,5 @@ class Task(object):
         """
 
         # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
-        duration = 100 + (distance * 10)
+        duration = 100 + (distance * 8.5)
         return duration

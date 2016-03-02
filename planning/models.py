@@ -117,12 +117,12 @@ class World(object):
         :return:
         """
         for robot in pos_dict['robots']:
-            if robot['team'] == 'yellow' and robot['group'] == 'green':
+            if robot['team'] == 'yellow' and robot['group'] == 'pink':
                 self.our_robot.x = robot['center'][0]
                 self.our_robot.y = robot['center'][1]
                 self.our_robot.angle = robot['angle']
 
-            if robot['team'] == 'blue' and robot['group'] == 'blue':
+            if robot['team'] == 'yellow' and robot['group'] == 'green':
                 self.teammate.x = robot['center'][0]
                 self.teammate.y = robot['center'][1]
                 self.teammate.angle = robot['angle']

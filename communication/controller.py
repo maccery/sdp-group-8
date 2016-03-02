@@ -10,7 +10,7 @@ import numpy as np
 
 # polynomial approximating low angle durations
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
-
+ungrabbed = False;
 
 def send_msg(s, msg, timeout, retries, ack):
     buff = ''
@@ -255,10 +255,12 @@ class Controller(Arduino):
         :return: duration it will be blocked
         """
 
+	ungrabbed = False;
+
         cmd = self.COMMANDS['grab']
         cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
         self._write(cmd)
-        return 0.2
+        return 0.4
 
     def ungrab(self):
         """
@@ -269,7 +271,9 @@ class Controller(Arduino):
         cmd = self.COMMANDS['ungrab']
         cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
         self._write(cmd)
-        return 0.2
+        return 0.5
+
+	ungrabbed = True;
 
     def move_distance(self, x=None, y=None, power=1):
         """
@@ -329,6 +333,9 @@ class Controller(Arduino):
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
+        #if (ungrabbed == False):
+	#    self.ungrab()
+
         cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
         self._write(cmd)
         return duration / 200
