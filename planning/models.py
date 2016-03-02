@@ -127,16 +127,6 @@ class World(object):
                 self.teammate.y = robot['center'][1]
                 self.teammate.angle = robot['angle']
 
-            if robot['team'] == 'blue' and robot['group'] == 'green':
-                self.teammate.x = robot['center'][0]
-                self.teammate.y = robot['center'][1]
-                self.teammate.angle = robot['angle']
-
-            if robot['team'] == 'blue' and robot['group'] == 'pink':
-                self.teammate.x = robot['center'][0]
-                self.teammate.y = robot['center'][1]
-                self.teammate.angle = robot['angle']
-
         if pos_dict['ball']:
             # Before we update the positions, we can calculate the velocity of the ball by comparing it with its
             # previous position
