@@ -31,8 +31,11 @@ class Task(object):
             if self._world.ball.speed < 5:
                 # move to the ball
                 if self.task_move_to_ball():
-                    self.ungrab_ball()
-                    return self.grab_ball()
+                    if self.ungrab_ball():
+                        if self.grab_ball():
+                            return self.ball_received()
+                        return False
+                    return False
                 else:
                     return False
             else:

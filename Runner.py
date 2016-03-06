@@ -40,7 +40,6 @@ class Runner(object):
         Logger.log_write("test")
         try:
             c = True
-            # self.robot.ping()
 
             while c != 27:  # the ESC key
                 if self.task is None:

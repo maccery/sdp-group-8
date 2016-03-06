@@ -81,7 +81,7 @@ the robot to perform actual tasks.
 
 In `models.py` you need to specify the color and team of both our robot and its teammate. This is at the bottom of the file. Once done, simply run:
 
-In `communinication/controller.py` you must edit the port of the Arduino USB.
+In `communinication/controller.py` you must edit the port of the Arduino USB. These are hardcoded but we plan to put them as parameters at some point.
 
 Run the command:
 ```
