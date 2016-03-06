@@ -1,6 +1,7 @@
 from math import cos, sin, hypot, pi, atan2
 from planning.tasks import Task
-
+from helper import *
+import time
 
 class Robot(object):
     def __init__(self, x, y, angle):
@@ -56,10 +57,23 @@ class Robot(object):
 
 
 class Ball(object):
-    def __init__(self, x, y):
+    def __init__(self, x, y, speed=0):
         self.x = x
         self.y = y
+        self.speed = speed
+        self.last_update_time = now()
 
+
+    def update_speed(self, x, y):
+        # calculate the speed the ball is moving at, based on the last time we updated the speed and the distnance moved
+
+        time_since_last_updated = now() - self.last_update_time
+        self.speed = calculate_speed(self.x, self.y, x, y, time_since_last_updated)
+
+        # time in seconds
+        self.x = x
+        self.y = y
+        self.last_update_time = now()
 
 class Goal(object):
     def __init__(self, x, y):
@@ -75,6 +89,7 @@ class World(object):
     def __init__(self, pitch_num):
         self._ball = Ball(0, 0)
         self._our_robot = Robot(0, 0, 0)
+        self._teammate = Robot(0, 0, 0)
         self._task = Task(self)
         self._goal = Goal(0, 0)
 
@@ -85,6 +100,10 @@ class World(object):
     @property
     def our_robot(self):
         return self._our_robot
+
+    @property
+    def teammate(self):
+        return self._teammate
 
     @property
     def task(self):
@@ -98,13 +117,21 @@ class World(object):
         :return:
         """
         for robot in pos_dict['robots']:
-            if robot['team'] == 'yellow' and robot['group'] == 'green':
+            if robot['team'] == 'yellow' and robot['group'] == 'pink':
                 self.our_robot.x = robot['center'][0]
                 self.our_robot.y = robot['center'][1]
                 self.our_robot.angle = robot['angle']
 
+            if robot['team'] == 'blue' and robot['group'] == 'green':
+                self.teammate.x = robot['center'][0]
+                self.teammate.y = robot['center'][1]
+                self.teammate.angle = robot['angle']
+
         if pos_dict['ball']:
-            self.ball.x = pos_dict['ball']['center'][0]
-            self.ball.y = pos_dict['ball']['center'][1]
+            # Before we update the positions, we can calculate the velocity of the ball by comparing it with its
+            # previous position
+            new_x = pos_dict['ball']['center'][0]
+            new_y = pos_dict['ball']['center'][1]
+            self.ball.update_speed(new_x, new_y) # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
             # print(self.ball.x, self.ball.y)

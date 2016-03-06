@@ -3,14 +3,14 @@ from multiprocessing import Value, Process, Pipe
 import struct
 import itertools
 import time
-from milestone2.logger import Logger
+from planning.logger import Logger
 import atexit
 from lib.math.util import convert_angle, get_duration
 import numpy as np
 
 # polynomial approximating low angle durations
 angle_poly = np.poly1d([-0.1735, 0.279, 0])
-
+ungrabbed = False;
 
 def send_msg(s, msg, timeout, retries, ack):
     buff = ''
@@ -78,17 +78,20 @@ class MockSerial(object):
 
 def msg_sender(pipe, avail, port, rate, timeout, retries):
     # establish serial connection
-    s = serial.Serial(port, rate, timeout=timeout)
-    # s = MockSerial(port, rate, timeout=timeout)
-    print 'Established connection, commencing initial wait for handshakes(5s)'
-    time.sleep(5)
-    print 'Connection should be up now, testing with ready'
-    if not ready_waiter(s, avail, timeout):
-        print 'Arduino not ready, what is going on??'
-        print 'waiting more'
-        time.sleep(10)
+    try:
+        s = serial.Serial(port, rate, timeout=timeout)
+        print "Established connection, commencing initial wait for handshakes(5s)"
+        time.sleep(5)
+        print 'Connection should be up now, testing with ready'
         if not ready_waiter(s, avail, timeout):
-            raise Exception("Arduino down for good")
+            print 'Arduino not ready, what is going on??'
+            print 'Waiting another 10 seconds'
+            time.sleep(10)
+            if not ready_waiter(s, avail, timeout):
+                raise Exception("Arduino down for good.")
+
+    except IOError:
+        print "Could not open port. Is Arudino running?"
 
     # we should be fine now
     while True:
@@ -252,10 +255,12 @@ class Controller(Arduino):
         :return: duration it will be blocked
         """
 
+	ungrabbed = False;
+
         cmd = self.COMMANDS['grab']
         cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
         self._write(cmd)
-        return 0.2
+        return 0.4
 
     def ungrab(self):
         """
@@ -266,7 +271,9 @@ class Controller(Arduino):
         cmd = self.COMMANDS['ungrab']
         cmd = self.get_command(cmd, (ord('T'), 'B'), (ord('O'), 'B'))
         self._write(cmd)
-        return 0.2
+        return 0.5
+
+	ungrabbed = True;
 
     def move_distance(self, x=None, y=None, power=1):
         """
@@ -326,6 +333,9 @@ class Controller(Arduino):
         :param duration:
         :return: Duration the arduino is to be blocked for
         """
+        #if (ungrabbed == False):
+	#    self.ungrab()
+
         cmd = self.get_command(self.COMMANDS['move_straight'], (duration, 'h'))
         self._write(cmd)
         return duration / 200

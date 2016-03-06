@@ -1,14 +1,6 @@
 import unittest
 import math
-from milestone2.models import World, Robot, Ball
-
-
-class TestModels(unittest.TestCase):
-    def test_updating_balls_coordinates(self):
-        world = World(0)
-        task = world.task
-        world.ball.x = 5
-        self.assertEqual(task.world.ball.x, 5)
+from planning.models import World, Robot, Ball
 
 
 class TestRotation(unittest.TestCase):

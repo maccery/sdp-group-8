@@ -1,6 +1,6 @@
-from models import *
-from communication.controller import Controller
 import time
+
+from communication.controller import Controller
 
 
 class Task(object):
@@ -20,6 +20,49 @@ class Task(object):
     Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
     """
 
+    def task_vision(self):
+        pass
+
+    def task_rotate_and_grab(self):
+        # rotate to face the ball
+        if self.rotate_to_ball():
+            # wait till ball has stopped
+            print('ball speed', self._world.ball.speed)
+            if self._world.ball.speed < 5:
+                # move to the ball
+                if self.task_move_to_ball():
+                    if self.ungrab_ball():
+                        if self.grab_ball():
+                            return self.ball_received()
+                        return False
+                    return False
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+
+    # Assuming we're facing the right direction
+    def task_grab_rotate_kick(self):
+        if self.move_to_ball():
+            if self.ball_received():
+                # grab the ball we've just be given
+                if self.grab_ball():
+                    # rotate to face the other robot
+                    if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                        # kick ball to teammate
+                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                   self._world.teammate.y)
+                        if self.kick_ball(distance_to_kick=distance):
+                            # check ball reached teammate
+                            return self.ball_received_by_teammate()
+                        return False
+                    return False
+                return False
+            return False
+        return False
+
     def task_move_to_ball(self):
         print("move_to_ball command called")
         # If we're happy with ball rotation and movement stop
@@ -32,6 +75,7 @@ class Task(object):
         # If we're happy with rotation and movement, grab the ball
         if self.rotate_to_ball():
             if self.move_to_ball():
+                # self.ungrab_ball()
                 return self.grab_ball()
             return False
         # Otherwise return false, and get more data from vision
@@ -67,13 +111,13 @@ class Task(object):
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
-        print("Need to moev this distance: ", distance)
+        print("Need to move this distance: ", distance)
 
         if distance < 30:
             return True
         else:
             calculated_duration = self.calculate_motor_duration(distance)
-            print ("RUnnin g for duration: ", calculated_duration)
+            print ("Running for duration: ", calculated_duration)
 
             # Tell arduino to move for the duration we've calculated
             self._communicate.move_duration(calculated_duration)
@@ -100,10 +144,12 @@ class Task(object):
         print ("robots coordinates", self._world.our_robot.x, self._world.our_robot.y)
         print("Rotate to face these co-ordinates: (", x, ",", y, ")")
         angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
+        distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         print("calculated angle is ", angle_to_rotate)
+        print("calculated distance is ", distance)
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if 25 >= angle_to_rotate >= -25:
+        if (15 >= angle_to_rotate >= -15 and distance > 40) or (10 >= angle_to_rotate >= -10 and distance <= 40):
             print("We're happy with the angle, no more rotation")
             return True
         else:
@@ -121,14 +167,53 @@ class Task(object):
         return True
 
     def grab_ball(self):
+        print('grabbing')
         wait_time = self._communicate.grab()
         time.sleep(wait_time)
         return True
 
-    def kick_ball(self):
-        wait_time = self._communicate.kick()
+    def kick_ball(self, distance_to_kick=None):
+        if distance_to_kick:
+            power = self.calculate_kick_power(distance_to_kick)
+        else:
+            power = 1
+
+        wait_time = self._communicate.kick(power)
         time.sleep(wait_time)
         return True
+
+    '''
+    Helper methods
+    '''
+
+    def ball_received(self):
+        # calculate displacement from us to ball
+        distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
+
+        if distance < 30:
+            return True
+        else:
+            return False
+
+    def ball_received_by_teammate(self):
+        # calculate displacement from us to ball
+        distance = self._world.teammate.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
+
+        if distance < 30:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def calculate_kick_power(distance):
+        """
+        Given a distance to kick, crudely calculates the power for the kicker; this is only used for ball kicking atm
+        :param distance:
+        """
+        # power is between 0.0 and 1.0, assume distance given is between 0.0 and 2.0. this function needs improving
+        power = (distance / 2)
+
+        return power
 
     @staticmethod
     def calculate_motor_duration_turn(angle_to_rotate):
@@ -136,7 +221,7 @@ class Task(object):
         :param angle_to_rotate: given in degrees
         """
         # crude angle -> duration conversion
-        duration = 100 + (abs(angle_to_rotate) * 3.1)
+        duration = 100 + (abs(angle_to_rotate) * 5)
 
         if angle_to_rotate < 0:
             duration = -duration
@@ -151,5 +236,5 @@ class Task(object):
         """
 
         # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
-        duration = 100 + (distance * 10)
+        duration = 100 + (distance * 8.5)
         return duration

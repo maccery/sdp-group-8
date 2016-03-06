@@ -1,4 +1,10 @@
 {
+     "auto_calibration": {
+        "mean_target": 95,
+        "std_dev_target": 40,
+        "step": 0.01,
+        "max_iterations": 100
+     },
 	"ball": {
 		"hue1_low": 0,
 		"sat_low": 190,
