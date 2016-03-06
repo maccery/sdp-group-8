@@ -53,13 +53,15 @@ class Runner(object):
         print("waiting 3 seconds for Arduino to get its shit together")
         time.sleep(3)
         Logger.log_write("test")
+	self.task = None
         try:
             c = True
             # self.robot.ping()
 
             while c != 27:  # the ESC key
                 if self.task == None:
-                    self.task = sys.stdin.readline().strip()
+                      print('Enter task')
+                      self.task = sys.stdin.readline().strip()
 
                 t2 = time.time()
                 # change of time between frames in seconds
