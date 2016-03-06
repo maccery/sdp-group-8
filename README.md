@@ -79,16 +79,19 @@ In `models.py`, the function `update_positions` takes the data from the vision s
 These commands take data from the vision system and integrate it with our lower-level Arduino commands, allowing
 the robot to perform actual tasks.
 
+In `models.py` you need to specify the color and team of both our robot and its teammate. This is at the bottom of the file. Once done, simply run:
+
+In `communinication/controller.py` you must edit the port of the Arduino USB.
+
 Run the command:
 ```
-python Runner.py pitch_number color task
+python Runner.py
 ```
 
-- `pitch_number` is `0` or `1`
-- `color` is `yellow` or `blue` depending on our robot's color
-- `task` can be `vision`, `task_move_to_ball`, `task_move_and_grab_ball`, `task_kick_ball_in_goal`)
+This will the start the task runner. After it's connected to the Arduino you'll be asked which task you want to execute, simply enter it and press enter (tasks below).
+Once the task is successfully completed, you can give it another task.
 
-## Move to ball
+## Task: Move to ball
 ``task_move_to_ball`` will gradually move the robot to the ball. It does this through an iterative method; it first
 will rotate to point to the ball, it will then wait for vision feedback, and repeat the process until the robot
 is facing it within ±25 degrees of accuracy. It then moves to the ball gradually, doing the same. Every time it moves forward, it will
@@ -96,22 +99,22 @@ repeat the process of rotation - this means at each stage of movement, it will r
 
 It will finally stop when within a displacement of 30 (arbitrary units) of the ball.
 
-## Move and grab ball
+## Task: Move and grab ball
 Run ``task_move_and_grab_ball``. This is the same as ``task_move_to_ball`` except that when it reaches the ball, it opens the grabber.
 
-## Kick ball in goal
+## Task: Kick ball in goal
 Given the goal's co-ordinates, it will keep rotating until it's happy with the angle, based on vision data, and then will
 open the grabber and kick the ball (it assumes the ball is already caught).
 
 
-## Receiving and grabbing
+## Task: Receiving and grabbing
 Run the command ``task_rotate_and_grab``. This will rotate the robot to our teammate, and grab the ball when it's within reach.
 
-## Receive, turn and pass
+## Task: Receive, turn and pass
 Run the command ``task_grab_rotate_kick``. This will wait till we've received the ball, then grab it, then rotate our robot to the teammate,
 then kick it at them. The function that calculates how hard to kick it is in ``tasks.py``, called `calculate_kick_power`.
 
-## Intercepting
+## Task: Intercepting
 One way to get the robot 'intercepting' the ball, is simply to tell it to move and grab the ball. Simply run ``task_move_and_grab_ball``.
 
 # Tests

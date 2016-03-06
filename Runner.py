@@ -11,19 +11,7 @@ import time
 
 
 class Runner(object):
-    def __init__(self, pitch, color, task, video_port=0, comm_port='/dev/ttyACM0', comms=1):
-        """
-        Parameters:
-            [int] pitch        0 - left pitch, 1 - right pitch
-            [string] color     the color of the team(yellow or blue)
-            [int] video_port   port number for the camera
-            [string] comm_port port number for the Arduino.
-        """
-        assert pitch in [0, 1]
-        assert color in ['yellow', 'blue']
-        self.task = task
-        self.pitch = pitch
-
+    def __init__(self):
         # Set up Arduino communications.
         # self.robot =
         self.calib_file = "vision/calibrations/calibrations.json"
@@ -36,9 +24,6 @@ class Runner(object):
         # Set up post-processing
         self.postprocessing = PostProcessing()
 
-        # Set up GUI
-        self.color = color
-
         self.wait_for_vision = True
 
     def run(self):
@@ -50,15 +35,16 @@ class Runner(object):
         timer = time.clock()
 
         # wait 10 seconds for arduino to connect
-        print("waiting 3 seconds for Arduino to get its shit together")
-        time.sleep(3)
+        print("waiting 4 seconds for Arduino to get its shit together")
+        time.sleep(4)
         Logger.log_write("test")
         try:
             c = True
             # self.robot.ping()
 
             while c != 27:  # the ESC key
-                if self.task == None:
+                if self.task is None:
+                    print("Please enter the task you wish to execute:")
                     self.task = sys.stdin.readline().strip()
 
                 t2 = time.time()
@@ -126,18 +112,10 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    # Havent done anything for right pitch yet. So choose option 0.
-    parser.add_argument("pitch", help="[0] Left pitch, [1] Right pitch")
-    # parser.add_argument("side", help="The side of our defender ['left', 'right'] allowed.")
-    parser.add_argument("color", help="The color of our team - ['yellow', 'blue'] allowed.")
-    parser.add_argument("task")
-    # parser.add_argument("attack_defend", help="Are we attacking or defending? - ['attack', 'defend']")
-    # parser.add_argument(
-    #     "-n", "--nocomms", help="Disables sending commands to the robot.", action="store_true")
 
     args = parser.parse_args()
     # if args.nocomms:
     #     c = Runner(
     #         pitch=int(args.pitch), color=args.color, our_side=args.side, attack_defend='attack', comms=0).run()
     # else:
-    c = Runner(pitch=int(args.pitch), color=args.color, task=args.task).run()
+    c = Runner().run()
