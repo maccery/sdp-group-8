@@ -1,5 +1,6 @@
 import time
 
+import helper
 from communication.controller import Controller
 
 
@@ -35,6 +36,15 @@ class Task(object):
 
             # we're good to go
             self.task_grab_rotate_kick()
+        # the ball is in just the attacker region, our task is to be half way between the ball and the goal
+        else:
+            # work out co-ordinates half way between goal and ball
+            midpoint_x, midpoint_y = helper.calculate_midpoint(self.world.our_goal.x, self.world.our_goal.y,
+                                                               self.world.ball.x, self.world.goal.y)
+
+            if self.move_to_coordinates(midpoint_x, midpoint_y):
+                if self.rotate_to_ball():
+                    self.ungrab_ball()
 
         # always return false, this means this task will keep running
         return False
@@ -306,7 +316,7 @@ class Task(object):
         robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
         for robot in robots:
             if (-self.world.safety_padding <= (resultant_x - robot.x) <= self.world.safety_padding) and (
-                    -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
+                            -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
 
                 # if this robot is moving, don't do anything
                 if robot.speed > 5:
@@ -318,9 +328,9 @@ class Task(object):
 
         # check if we're going to run into a wall
         if (self.world.pitch_boundary_bottom + self.world.safety_padding >= resultant_x) or (
-                self.world.pitch_boundary_top - self.world.safety_padding <= resultant_x) or (
+                        self.world.pitch_boundary_top - self.world.safety_padding <= resultant_x) or (
                         self.world.pitch_boundary_left - self.world.safety_padding >= resultant_y) or (
-                self.world.pitch_boundary_right + self.world.safety_padding <= resultant_y):
+                        self.world.pitch_boundary_right + self.world.safety_padding <= resultant_y):
             return False
 
         # we're good to move here

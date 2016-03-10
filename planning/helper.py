@@ -1,8 +1,10 @@
-from math import hypot
 import time
+from math import hypot
+
 
 def now():
     return int(round(time.time()))
+
 
 def calculate_speed(start_x, start_y, end_x, end_y, time):
     """
@@ -26,3 +28,10 @@ def calculate_speed(start_x, start_y, end_x, end_y, time):
         return displacement
     else:
         return displacement / time
+
+
+def calculate_midpoint(x1, y1, x2, y2):
+    midpoint_x = (x1 + x2) / 2
+    midpoint_y = (y1 + y2) / 2
+
+    return midpoint_x, midpoint_y
