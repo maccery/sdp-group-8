@@ -26,7 +26,14 @@ class Task(object):
         Once it has the ball, it shall pass to teammate.
         If the ball is in the attacking region, it shall just protect the goal and wait.
         """
-        pass
+
+        # while the ball is with us, just go to it. When you've got it, pass to teammate
+        if self.ball_in_defender_region():
+            # if the ball is in the defender region, this is our primary task
+            self.task_grab_rotate_kick()
+
+        # always return false, this means this task will keep running
+        return False
 
     def task_attacker(self):
         """
@@ -35,7 +42,12 @@ class Task(object):
         If the ball is in the attacking region, it will strive to grab the ball.
         Once it has the ball, it will look to shoot it in the goal.
         """
-        pass
+        if self.ball_in_attacker_region():
+            if self.task_move_and_grab_ball():
+                self.task_kick_ball_in_goal()
+
+        # always return false, this means this task will keep running
+        return False
 
     def task_penalty(self):
         """
@@ -235,13 +247,39 @@ class Task(object):
         else:
             return False
 
-    @staticmethod
-    def safe_to_move(self):
+    def ball_in_defender_region(self):
+        if self._world.defender_region.contains(self._world.ball.x, self._world.ball.y):
+            return True
+        else:
+            return False
+
+    def ball_in_attacker_region(self):
+        if self._world.attacker_region.contains(self._world.ball.x, self._world.ball.y):
+            return True
+        else:
+            return False
+
+    def safety_check(self, distance_from_us=30):
         """
-        This method determines whether it's safe to continue moving or are we gonna hit a robot
-        :param self:
-        :return:
+        Before any movement is called, this is called. This essentially checks if the movement we're about to do will hit someone
+        else (roughly).
+        :param distance_from_us We move in iterations, this specifies the amount of movement we're literally just about to do
+        :return: bool
         """
+
+        # we need to work out the co-ordinates of where we roughly plan to be after this movement
+        # we can do this by adding the distance onto the direction we're facing
+        resultant_x = self._world.our_robot.y
+        resultant_y = self._world.our_robot.y
+
+        # is this co-ordinate within (z) units of other robots? if so we need to stop and think
+        robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
+        for robot in robots:
+            if (-20 <= (resultant_x - robot.x) <= 20) and (-20 <= (resultant_y - robot.y) <= 20):
+                # danger, the robot is very close
+
+                if robot.speed > 5:
+                    return False
 
     @staticmethod
     def calculate_kick_power(distance):

@@ -37,7 +37,10 @@ class Runner(object):
         # wait 10 seconds for arduino to connect
         print("waiting 4 seconds for Arduino to get its shit together")
         time.sleep(4)
-        Logger.log_write("test")
+
+        # This asks nicely for goal location, etc
+        self.initiate_world()
+
         try:
             c = True
 
@@ -74,6 +77,51 @@ class Runner(object):
         finally:
             pass
             # self.robot.stop()
+
+    def initiate_world(self):
+        print ("Please enter the defender area left most co-ordinate")
+        self.world.defender_region.left = sys.stdin.readline().strip()
+
+        print ("Please enter the defender area right most co-ordinate")
+        self.world.defender_region.right = sys.stdin.readline().strip()
+
+        print ("Please enter the attacker area left most co-ordinate")
+        self.world.attacker_region.left = sys.stdin.readline().strip()
+
+        print ("Please enter the attack area right most co-ordinate")
+        self.world.attacker_region.right = sys.stdin.readline().strip()
+
+        print ("Please enter our goal area x co-ordinate")
+        self.world.our_goal.x = sys.stdin.readline().strip()
+
+        print ("Please enter our goal area y co-ordinate")
+        self.world.our_goal.y = sys.stdin.readline().strip()
+
+        print ("Please enter their goal area x co-ordinate")
+        self.world.their_goal.x = sys.stdin.readline().strip()
+
+        print ("Please enter their goal area y co-ordinate")
+        self.world.their_goal.y = sys.stdin.readline().strip()
+
+        print ("What's our team's colour?")
+        self.world.our_robot.team_color = sys.stdin.readline().strip()
+        self.world.teammate.team_color = sys.stdin.readline().strip()
+
+        print ("What's our robot's colour?")
+        self.world.our_robot.group_color = sys.stdin.readline().strip()
+
+        print ("What's our teammates robot's colour?")
+        self.world.teammate.group_color = sys.stdin.readline().strip()
+
+        print ("What's the other team's colour?")
+        self.world.their_attacker.team_color = sys.stdin.readline().strip()
+        self.world.their_defender.team_color = sys.stdin.readline().strip()
+
+        print ("What's the other team's attack group color?")
+        self.world.their_attacker.group_color = sys.stdin.readline().strip()
+
+        print ("What's the other team's defender group color?")
+        self.world.their_defender.group_color = sys.stdin.readline().strip()
 
     def task_execution(self):
         """

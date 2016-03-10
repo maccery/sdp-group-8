@@ -12,6 +12,8 @@ class Robot(object):
         self.angle = angle  # degrees from the north. 0 being north, +clockwise, -anticlockwise
         self.speed = speed
         self.last_update_time = now()
+        self.team_color = None
+        self.group_color = None
 
     def get_rotation_to_point(self, target_x, target_y):
         """
@@ -96,11 +98,21 @@ class Goal(object):
 
 
 class Region(object):
-    def __init__(self, top_left, top_right, bottom_left, bottom_right):
-        self.top_left = top_left
-        self.top_right = top_right
-        self.bottom_left = bottom_left
-        self.bottom_right = bottom_right
+    def __init__(self, left, right):
+        self.left = left  # x co-ordinate of the very left of region
+        self.right = right  # x co-ordinate of the very right of region
+
+    def contains(self, x, y):
+        """
+        If these co-ordinates are within this region, return true otherwise return false. Regions are only split vertically,
+        and so we don't care about the y co-oridnates
+        :param x:
+        :param y:
+        """
+        if self.left >= x >= self.right:
+            return True
+        else:
+            return False
 
 
 class World(object):
@@ -168,25 +180,25 @@ class World(object):
         :return:
         """
         for robot in pos_dict['robots']:
-            if robot['team'] == 'yellow' and robot['group'] == 'pink':
+            if robot['team'] == self.our_robot.team_color and robot['group'] == self.our_robot.group_color:
                 new_x = robot['center'][0]
                 new_y = robot['center'][1]
                 self.our_robot.angle = robot['angle']
                 self.our_robot.update_speed(new_x, new_y)
 
-            if robot['team'] == 'blue' and robot['group'] == 'green':
+            if robot['team'] == self.teammate.team_color and robot['group'] == self.teammate.group_color:
                 new_x = robot['center'][0]
                 new_y = robot['center'][1]
                 self.teammate.angle = robot['angle']
                 self.teammate.update_speed(new_x, new_y)
 
-            if robot['team'] == 'blue' and robot['group'] == 'green':
+            if robot['team'] == self.their_attacker.team_color and robot['group'] == self.their_defender.group_color:
                 new_x = robot['center'][0]
                 new_y = robot['center'][1]
                 self.their_attacker.angle = robot['angle']
                 self.their_attacker.update_speed(new_x, new_y)
 
-            if robot['team'] == 'blue' and robot['group'] == 'green':
+            if robot['team'] == self.their_defender.team_color and robot['group'] == self.their_defender.group_color:
                 new_x = robot['center'][0]
                 new_y = robot['center'][1]
                 self.their_defender.angle = robot['angle']
