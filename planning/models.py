@@ -1,7 +1,8 @@
-from math import cos, sin, hypot, pi, atan2
-from planning.tasks import Task
+from math import hypot, pi, atan2
+
 from helper import *
-import time
+from planning.tasks import Task
+
 
 class Robot(object):
     def __init__(self, x, y, angle):
@@ -63,7 +64,6 @@ class Ball(object):
         self.speed = speed
         self.last_update_time = now()
 
-
     def update_speed(self, x, y):
         # calculate the speed the ball is moving at, based on the last time we updated the speed and the distnance moved
 
@@ -75,10 +75,19 @@ class Ball(object):
         self.y = y
         self.last_update_time = now()
 
+
 class Goal(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+
+class Region(object):
+    def __init__(self, top_left, top_right, bottom_left, bottom_right):
+        self.top_left = top_left
+        self.top_right = top_right
+        self.bottom_left = bottom_left
+        self.bottom_right = bottom_right
 
 
 class World(object):
@@ -90,8 +99,12 @@ class World(object):
         self._ball = Ball(0, 0)
         self._our_robot = Robot(0, 0, 0)
         self._teammate = Robot(0, 0, 0)
+        self._their_attacker = Robot(0, 0, 0)
+        self._their_defender = Robot(0, 0, 0)
         self._task = Task(self)
         self._goal = Goal(0, 0)
+        self._defender_region = Region(0, 0, 0, 0)
+        self._attacker_region = Region(0, 0, 0, 0)
 
     @property
     def ball(self):
@@ -102,12 +115,28 @@ class World(object):
         return self._our_robot
 
     @property
+    def their_attacker(self):
+        return self._their_attacker
+
+    @property
+    def their_defender(self):
+        return self._their_defender
+
+    @property
     def teammate(self):
         return self._teammate
 
     @property
     def task(self):
         return self._task
+
+    @property
+    def defending_region(self):
+        return self._defender_region
+
+    @property
+    def defending_region(self):
+        return self._attacker_region
 
     def update_positions(self, pos_dict):
         """
@@ -127,11 +156,21 @@ class World(object):
                 self.teammate.y = robot['center'][1]
                 self.teammate.angle = robot['angle']
 
+            if robot['team'] == 'blue' and robot['group'] == 'green':
+                self.their_attacker.x = robot['center'][0]
+                self.their_attacker.y = robot['center'][1]
+                self.their_attacker.angle = robot['angle']
+
+            if robot['team'] == 'blue' and robot['group'] == 'green':
+                self.their_defender.x = robot['center'][0]
+                self.their_defender.y = robot['center'][1]
+                self.their_defender.angle = robot['angle']
+
         if pos_dict['ball']:
             # Before we update the positions, we can calculate the velocity of the ball by comparing it with its
             # previous position
             new_x = pos_dict['ball']['center'][0]
             new_y = pos_dict['ball']['center'][1]
-            self.ball.update_speed(new_x, new_y) # this also updates positions
+            self.ball.update_speed(new_x, new_y)  # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
             # print(self.ball.x, self.ball.y)

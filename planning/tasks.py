@@ -172,7 +172,8 @@ class Task(object):
         """
         Given a specific robot, it will rotate to face a specific angle
 
-        :param target_vector:
+        :param x:
+        :param y:
         """
         print ("robots coordinates", self._world.our_robot.x, self._world.our_robot.y)
         print("Rotate to face these co-ordinates: (", x, ",", y, ")")
