@@ -17,7 +17,34 @@ class Task(object):
         self._world = world
 
     """
-    Big tasks are things such as "move and grab ball"; these are made up of smaller tasks
+    Strategies
+    """
+
+    def task_defender(self):
+        """
+        Robot will strive to stay in the defending region, avoid other robots, and intercept ball.
+        Once it has the ball, it shall pass to teammate.
+        If the ball is in the attacking region, it shall just protect the goal and wait.
+        """
+        pass
+
+    def task_attacker(self):
+        """
+        Robot will not enter defending region. It will stay in attacking region.
+        If the ball is in the defending region (which it cannot enter), it will wait to receive the ball from teammate.
+        If the ball is in the attacking region, it will strive to grab the ball.
+        Once it has the ball, it will look to shoot it in the goal.
+        """
+        pass
+
+    def task_penalty(self):
+        """
+        Robot will aim to take a penalty, playing by the penalty rules
+        """
+        pass
+
+    """
+    Big tasks; these are made up of smaller tasks
     """
 
     def task_vision(self):
@@ -65,10 +92,16 @@ class Task(object):
 
     def task_move_to_ball(self):
         print("move_to_ball command called")
-        # If we're happy with ball rotation and movement stop
-        if self.rotate_to_ball():
-            return self.move_to_ball()
+        # If the ball isn't moving, we can just move to it
+        if self._world.ball.speed < 5:
+            if self.rotate_to_ball():
+                return self.move_to_ball()
+            else:
+                return False
+        # If the ball IS moving, we need to predict where it's going and move there...
         else:
+            if self.rotate_to_ball():
+                return self.move_to_ball()
             return False
 
     def task_move_and_grab_ball(self):
@@ -203,6 +236,14 @@ class Task(object):
             return True
         else:
             return False
+
+    @staticmethod
+    def safe_to_move(self):
+        """
+        This method determines whether it's safe to continue moving or are we gonna hit a robot
+        :param self:
+        :return:
+        """
 
     @staticmethod
     def calculate_kick_power(distance):
