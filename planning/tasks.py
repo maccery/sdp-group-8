@@ -116,11 +116,8 @@ class Task(object):
             return False
 
     def task_kick_ball_in_goal(self):
-        goal_x = 640
-        goal_y = 240
-
         # If we're happy with rotation to face goal, ungarb and kick the ball
-        if self.rotate_to_alignment(goal_x, goal_y):
+        if self.rotate_to_alignment(self.world.their_goal.x, self.world.their_goal.y):
             if self.ungrab_ball():
                 return self.kick_ball()
             return False
