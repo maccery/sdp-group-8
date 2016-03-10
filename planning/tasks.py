@@ -29,7 +29,11 @@ class Task(object):
 
         # while the ball is with us, just go to it. When you've got it, pass to teammate
         if self.ball_in_defender_region():
-            # if the ball is in the defender region, this is our primary task
+            # if the ball is in the attacker region as well, we need to check who's closer - attacker or us
+            if self.ball_in_attacker_region() and not self.are_we_closer_than_teammate():
+                return False
+
+            # we're good to go
             self.task_grab_rotate_kick()
 
         # always return false, this means this task will keep running
@@ -43,6 +47,11 @@ class Task(object):
         Once it has the ball, it will look to shoot it in the goal.
         """
         if self.ball_in_attacker_region():
+            # if the ball is in the defender region as well, we need to check who's closer - defender or us
+            if self.ball_in_defender_region() and not self.are_we_closer_than_teammate():
+                return False
+
+            # we're good to go
             if self.task_move_and_grab_ball():
                 self.task_kick_ball_in_goal()
 
@@ -147,27 +156,30 @@ class Task(object):
         already
         :param target_vector
         """
-
         print("Move to these co-ordinates: (", x, ",", y, ")")
 
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
-        print("Need to move this distance: ", distance)
+        # are we gonna hit anyone in this time
+        if self.safety_check(distance):
+            print("Need to move this distance: ", distance)
 
-        if distance < 30:
-            return True
+            if distance < 30:
+                return True
+            else:
+                calculated_duration = self.calculate_motor_duration(distance)
+                print ("Running for duration: ", calculated_duration)
+
+                # Tell arduino to move for the duration we've calculated
+                self._communicate.move_duration(calculated_duration)
+
+                # Wait until this task has completed
+                print("We're sleeping for a bit while arudino gets it shit together", calculated_duration)
+                time.sleep(calculated_duration / 1000)
+                # Returns false which means we'll get more data from vision first, run this function again, to verify ok
+                return False
         else:
-            calculated_duration = self.calculate_motor_duration(distance)
-            print ("Running for duration: ", calculated_duration)
-
-            # Tell arduino to move for the duration we've calculated
-            self._communicate.move_duration(calculated_duration)
-
-            # Wait until this task has completed
-            print("We're sleeping for a bit while arudino gets it shit together", calculated_duration)
-            time.sleep(calculated_duration / 1000)
-            # Returns false which means we'll get more data from vision first, run this function again, to verify ok
             return False
 
     def rotate_to_ball(self):
@@ -229,6 +241,15 @@ class Task(object):
     Helper methods
     '''
 
+    def are_we_closer_than_teammate(self):
+        distance_for_us = self.world.our_robot.get_displacement_to_point(self.world.ball.x, self.world.ball.y)
+        distance_for_teammate = self.world.teammate.get_displacement_to_point(self.world.ball.x, self.world.ball.y)
+
+        if distance_for_us > distance_for_teammate:
+            return False
+        else:
+            return True
+
     def ball_received(self):
         # calculate displacement from us to ball
         distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
@@ -276,10 +297,18 @@ class Task(object):
         robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
         for robot in robots:
             if (-20 <= (resultant_x - robot.x) <= 20) and (-20 <= (resultant_y - robot.y) <= 20):
-                # danger, the robot is very close
 
+                # if this robot is moving, don't do anything
                 if robot.speed > 5:
                     return False
+                # robot is unlikely to move, let's re-route
+                else:
+                    # this needs to be implemented
+                    return False
+
+        # we're good to move here
+        return True
+
 
     @staticmethod
     def calculate_kick_power(distance):

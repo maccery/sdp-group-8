@@ -17,6 +17,7 @@ class Runner(object):
         self.calib_file = "vision/calibrations/calibrations.json"
         self.vision = Vision(self.calib_file)
         self.gui = GUI(self.vision.calibrations)
+        self.task = None
 
         # Set up world
         self.world = World(self.calib_file)
@@ -35,7 +36,7 @@ class Runner(object):
         timer = time.clock()
 
         # wait 10 seconds for arduino to connect
-        print("waiting 4 seconds for Arduino to get its shit together")
+        print("Connecting to Arduino, please wait till confirmation message")
         time.sleep(4)
 
         # This asks nicely for goal location, etc
@@ -157,12 +158,6 @@ class Runner(object):
 
 if __name__ == '__main__':
     import argparse
-
     parser = argparse.ArgumentParser()
-
     args = parser.parse_args()
-    # if args.nocomms:
-    #     c = Runner(
-    #         pitch=int(args.pitch), color=args.color, our_side=args.side, attack_defend='attack', comms=0).run()
-    # else:
-    c = Runner().run()
+    Runner().run()
