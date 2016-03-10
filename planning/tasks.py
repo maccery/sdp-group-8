@@ -60,7 +60,13 @@ class Task(object):
 
     def task_penalty(self):
         """
-        Robot will aim to take a penalty, playing by the penalty rules
+        Robot will aim to take a penalty, playing by the penalty rules.
+        """
+        pass
+
+    def task_penalty_goalie(self):
+        """
+        Robot will be goalie for penality
         """
         pass
 
@@ -284,19 +290,23 @@ class Task(object):
         """
         Before any movement is called, this is called. This essentially checks if the movement we're about to do will hit someone
         else (roughly).
+
+        Check we aren't gonna run into a wall either
+
         :param distance_from_us We move in iterations, this specifies the amount of movement we're literally just about to do
         :return: bool
         """
 
         # we need to work out the co-ordinates of where we roughly plan to be after this movement
         # we can do this by adding the distance onto the direction we're facing
-        resultant_x = self._world.our_robot.y
-        resultant_y = self._world.our_robot.y
+        resultant_x = self.world.our_robot.y
+        resultant_y = self.world.our_robot.y
 
         # is this co-ordinate within (z) units of other robots? if so we need to stop and think
         robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
         for robot in robots:
-            if (-20 <= (resultant_x - robot.x) <= 20) and (-20 <= (resultant_y - robot.y) <= 20):
+            if (-self.world.safety_padding <= (resultant_x - robot.x) <= self.world.safety_padding) and (
+                    -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
 
                 # if this robot is moving, don't do anything
                 if robot.speed > 5:
@@ -306,9 +316,15 @@ class Task(object):
                     # this needs to be implemented
                     return False
 
+        # check if we're going to run into a wall
+        if (self.world.pitch_boundary_bottom + self.world.safety_padding >= resultant_x) or (
+                self.world.pitch_boundary_top - self.world.safety_padding <= resultant_x) or (
+                        self.world.pitch_boundary_left - self.world.safety_padding >= resultant_y) or (
+                self.world.pitch_boundary_right + self.world.safety_padding <= resultant_y):
+            return False
+
         # we're good to move here
         return True
-
 
     @staticmethod
     def calculate_kick_power(distance):

@@ -131,10 +131,23 @@ class World(object):
         self._our_goal = Goal(0, 240)
         self._defender_region = Region(0, 0, 0, 0)
         self._attacker_region = Region(0, 0, 0, 0)
+        self._safety_padding = 20
+        self._pitch_boundary_bottom = 0
+        self._pitch_boundary_top = 0
+        self._pitch_boundary_right = 0
+        self._pitch_boundary_left = 0
 
     @property
     def ball(self):
         return self._ball
+
+    @property
+    def safety_padding(self):
+        return self._safety_padding
+
+    @safety_padding.setter
+    def safety_padding(self, value):
+        self._safety_padding = value
 
     @property
     def our_goal(self):
@@ -159,6 +172,38 @@ class World(object):
     @property
     def teammate(self):
         return self._teammate
+
+    @property
+    def pitch_boundary_bottom(self):
+        return self._pitch_boundary_bottom
+
+    @property
+    def pitch_boundary_top(self):
+        return self._pitch_boundary_top
+
+    @property
+    def pitch_boundary_left(self):
+        return self._pitch_boundary_left
+
+    @property
+    def pitch_boundary_right(self):
+        return self._pitch_boundary_right
+
+    @pitch_boundary_bottom.setter
+    def pitch_boundary_bottom(self, value):
+        self._pitch_boundary_bottom = value
+
+    @pitch_boundary_top.setter
+    def pitch_boundary_top(self, value):
+        self._pitch_boundary_top = value
+
+    @pitch_boundary_left.setter
+    def pitch_boundary_left(self, value):
+        self._pitch_boundary_left = value
+
+    @pitch_boundary_right.setter
+    def pitch_boundary_right(self, value):
+        self._pitch_boundary_right = value
 
     @property
     def task(self):
@@ -211,4 +256,6 @@ class World(object):
             new_y = pos_dict['ball']['center'][1]
             self.ball.update_speed(new_x, new_y)  # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
-            # print(self.ball.x, self.ball.y)
+            # print(self.ball.x, self.bal
+
+

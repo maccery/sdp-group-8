@@ -80,16 +80,16 @@ class Runner(object):
             # self.robot.stop()
 
     def initiate_world(self):
-        print ("Please enter the defender area left most co-ordinate")
+        print ("Please enter the defender area left most x value")
         self.world.defender_region.left = sys.stdin.readline().strip()
 
-        print ("Please enter the defender area right most co-ordinate")
+        print ("Please enter the defender area right most x value")
         self.world.defender_region.right = sys.stdin.readline().strip()
 
-        print ("Please enter the attacker area left most co-ordinate")
+        print ("Please enter the attacker area left most x value")
         self.world.attacker_region.left = sys.stdin.readline().strip()
 
-        print ("Please enter the attack area right most co-ordinate")
+        print ("Please enter the attack area right most x value")
         self.world.attacker_region.right = sys.stdin.readline().strip()
 
         print ("Please enter our goal area x co-ordinate")
@@ -103,6 +103,18 @@ class Runner(object):
 
         print ("Please enter their goal area y co-ordinate")
         self.world.their_goal.y = sys.stdin.readline().strip()
+
+        print ("Please enter the left most x value")
+        self.world.pitch_boundary_left = sys.stdin.readline().strip()
+
+        print ("Please enter their goal area y co-ordinate")
+        self.world.pitch_boundary_right = sys.stdin.readline().strip()
+
+        print ("Please enter the lowest y co-ordinate")
+        self.world.pitch_boundary_bottom = sys.stdin.readline().strip()
+
+        print ("Please enter the largest y coordinate")
+        self.world.pitch_boundary_top = sys.stdin.readline().strip()
 
         print ("What's our team's colour?")
         self.world.our_robot.team_color = sys.stdin.readline().strip()
@@ -123,6 +135,9 @@ class Runner(object):
 
         print ("What's the other team's defender group color?")
         self.world.their_defender.group_color = sys.stdin.readline().strip()
+
+        print ("How much padding do we want around the robots/walls for safety?")
+        self.world.safety_padding = sys.stdin.readline().strip()
 
     def task_execution(self):
         """
