@@ -296,7 +296,7 @@ class Task(object):
         else:
             return False
 
-    def safety_check(self, distance_from_us=30):
+    def safety_check(self, resultant_x, resultant_y):
         """
         Before any movement is called, this is called. This essentially checks if the movement we're about to do will hit someone
         else (roughly).
@@ -307,24 +307,29 @@ class Task(object):
         :return: bool
         """
 
-        # we need to work out the co-ordinates of where we roughly plan to be after this movement
-        # we can do this by adding the distance onto the direction we're facing
-        resultant_x = self.world.our_robot.y
-        resultant_y = self.world.our_robot.y
+        # we're aiming for these co-ordinates, but realistically we aren't gonna move in a straight line
+        # so let's see if there's any robots in our path (but not loop through every possibility, just every +padding
+        # certaintly not most efficient way but who cares anymore...
+        check_x = self.world.our_robot.x
+        check_y = self.world.our_robot.y
 
-        # is this co-ordinate within (z) units of other robots? if so we need to stop and think
-        robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
-        for robot in robots:
-            if (-self.world.safety_padding <= (resultant_x - robot.x) <= self.world.safety_padding) and (
-                            -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
+        while check_x <= resultant_x and check_y <= resultant_y:
+            # is this co-ordinate within (z) units of other robots? if so we need to stop and think
+            robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
+            for robot in robots:
+                if (-self.world.safety_padding <= (resultant_x - robot.x) <= self.world.safety_padding) and (
+                                -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
 
-                # if this robot is moving, don't do anything
-                if robot.speed > 5:
-                    return False
-                # robot is unlikely to move, let's re-route
-                else:
-                    # this needs to be implemented
-                    return False
+                    # if this robot is moving, don't do anything
+                    if robot.speed > 5:
+                        return False
+                    # robot is unlikely to move, let's re-route
+                    else:
+                        # this needs to be implemented
+                        return False
+
+            check_x += self.world.safety_padding
+            check_y += self.world.safety_padding
 
         # check if we're going to run into a wall
         if (self.world.pitch_boundary_bottom + self.world.safety_padding >= resultant_x) or (
