@@ -313,12 +313,15 @@ class Task(object):
         check_x = self.world.our_robot.x
         check_y = self.world.our_robot.y
 
+        if self.world.safety_padding <= 0:
+            self.world.safety_padding = 1
+
         while check_x <= resultant_x and check_y <= resultant_y:
             # is this co-ordinate within (z) units of other robots? if so we need to stop and think
-            robots = [self._world.teammate, self._world.their_defender, self._world.their_attacker]
+            robots = [self.world.teammate, self.world.their_defender, self.world.their_attacker]
             for robot in robots:
-                if (-self.world.safety_padding <= (resultant_x - robot.x) <= self.world.safety_padding) and (
-                                -self.world.safety_padding <= (resultant_y - robot.y) <= self.world.safety_padding):
+                if (abs(resultant_x - robot.x) <= self.world.safety_padding) and abs(
+                                resultant_y - robot.y) <= self.world.safety_padding:
 
                     # if this robot is moving, don't do anything
                     if robot.speed > 5:
