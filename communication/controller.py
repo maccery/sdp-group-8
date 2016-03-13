@@ -33,7 +33,7 @@ def send_msg(s, msg, timeout, retries, ack):
                     break
 
                 if ack in buff:
-                    print 'Found ACK condition in response, accepting'
+                    #print 'Found ACK condition in response, accepting'
                     Logger.log_write("Found ACK condition, accepting")
                     break
             end_time = time.time()
@@ -113,7 +113,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
             print 'Got msg {0} which is {1:.2f}s old, rejecting'.format(msg, time.time() - t)
             Logger.log_write("Rejected msg '{0}' as it was {1:.2f}s old".format(msg, time.time() - t))
             continue
-        print 'Trying to send msg "{0}"'.format(msg)
+        #print 'Trying to send msg "{0}"'.format(msg)
 
         if 'STOP' not in msg:
             ready_waiter(s, avail, timeout, retries=2)
@@ -122,7 +122,7 @@ def msg_sender(pipe, avail, port, rate, timeout, retries):
                 continue
         avail.value = 0
         if send_msg(s, msg, timeout, retries, 'ACK'):
-            print 'msg properly sent to arduino'
+            #print 'msg properly sent to arduino'
             continue
 
 
@@ -152,7 +152,7 @@ class Arduino(object):
 
     def _write(self, string, important=False):
         # NB - the sender thread will try to check whether it can run it actually, so it should probably work
-        print("Trying to run command: '{0}'".format(string))
+        #print("Trying to run command: '{0}'".format(string))
         string += '\n'
         self.pipe.send((time.time(), string))
 
@@ -240,13 +240,13 @@ class Controller(Arduino):
         # cmd = self.COMMANDS['kick']
         # cmd = self.get_command(cmd, (abs(power), 'B'), (0, 'B'))  # uchar
         # self._write(cmd)
-        self.run_motor(3, 0.2, 800)
+        self.run_motor(3, -0.2, 800)
         time.sleep(1)
-        self.run_motor(3, -1.0 * power, (250 / power))
+        self.run_motor(3, 1.0 * power, (250 / power))
         time.sleep(2)
-        self.run_motor(3, 0.15, 1000)
+        self.run_motor(3, -0.15, 1000)
         time.sleep(2)
-        self.run_motor(3, 0.15, 400)
+        self.run_motor(3, -0.15, 400)
         return 4
 
     def grab(self):

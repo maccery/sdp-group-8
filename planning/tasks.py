@@ -31,14 +31,17 @@ class Task(object):
 
         # while the ball is with us, just go to it. When you've got it, pass to teammate
         if self.ball_in_defender_region():
+            print ("Ball in defender region")
             # if the ball is in the attacker region as well, we need to check who's closer - attacker or us
             if self.ball_in_attacker_region() and not self.are_we_closer_than_teammate():
+                print ("Sit and wait for the ball")
                 self.task_sit_between_goal_and_ball()
 
             # we're good to go, get ball and kick to teammate
             self.task_grab_rotate_kick()
         # the ball is in just the attacker region, our task is to be half way between the ball and the goal
         else:
+            print "Ball is not in defender region, sit and wait for ball"
             self.task_sit_between_goal_and_ball()
 
         # always return false, this means this task will keep running
@@ -68,7 +71,7 @@ class Task(object):
         Robot will aim to take a penalty, playing by the penalty rules. Assumes robot is holding ball
         """
         # wait a random amount of time
-        random_number = randint(20, 100)
+        random_number = randint(1, 5)
         time.sleep(random_number)
 
         # shoot
@@ -110,17 +113,20 @@ class Task(object):
         Opens grabbers and moves to the ball, grabs it, rotates to teammate, kicks it to teammate.
         Does not check if ball is received by teammate
         """
-        if self.ungrab_ball():
+        print ("Go grab the ball, kick it to teammate")
+        #if self.ungrab_ball():
+        if self.rotate_to_ball():
             if self.move_to_ball():
                 if self.ball_received():
-                    # grab the ball we've just be given
+                        # grab the ball we've just be given
                     if self.grab_ball():
-                        # rotate to face the other robot
+                            # rotate to face the other robot
                         if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                            # kick ball to teammate
-                            distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
-                                                                                       self._world.teammate.y)
-                            return self.kick_ball(distance_to_kick=distance)
+                            if self.ungrab_ball():
+                                    # kick ball to teammate
+                                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                               self._world.teammate.y)
+                                return self.kick_ball(distance_to_kick=distance)
 
         return False
 
@@ -160,10 +166,12 @@ class Task(object):
     def task_sit_between_goal_and_ball(self):
         # work out co-ordinates half way between goal and ball
         midpoint_x, midpoint_y = helper.calculate_midpoint(self.world.our_goal.x, self.world.our_goal.y,
-                                                           self.world.ball.x, self.world.goal.y)
+                                                           self.world.ball.x, self.world.ball.y)
 
-        if self.move_to_coordinates(midpoint_x, midpoint_y):
-            if self.rotate_to_ball():
+        print ("our goal x, our goal y, ball x, ball y", self.world.our_goal.x, self.world.our_goal.y,
+                                                         self.world.ball.x, self.world.ball.y)
+        if self.rotate_to_alignment(midpoint_x, midpoint_y):
+            if self.move_to_coordinates(midpoint_x, midpoint_y):
                 return self.ungrab_ball()
         return False
 
@@ -177,14 +185,15 @@ class Task(object):
         already
         :param target_vector
         """
+        print ("Move to coordinates x, y", x, y)
 
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         # are we gonna hit anyone in this time
-        if self.safety_check(distance):
+        if self.safety_check(x, y):
 
-            if distance < 30:
+            if distance < 32:
                 return True
             else:
                 calculated_duration = self.calculate_motor_duration(distance)
@@ -198,9 +207,12 @@ class Task(object):
                 # Returns false which means we'll get more data from vision first, run this function again, to verify ok
                 return False
         else:
+
+            print ("Safety check failed")
             return False
 
     def rotate_to_ball(self):
+        print ("Rotate to ball")
         return self.rotate_to_alignment(self._world.ball.x, self._world.ball.y)
 
     def move_to_ball(self):
@@ -217,7 +229,7 @@ class Task(object):
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if (15 >= angle_to_rotate >= -15 and distance > 40) or (10 >= angle_to_rotate >= -10 and distance <= 40):
+        if (15 >= angle_to_rotate >= -15 and distance > 40) or (5 >= angle_to_rotate >= -5 and distance <= 40) or (25 >= angle_to_rotate >= -25 and distance <= 30):
             return True
         else:
             duration = self.calculate_motor_duration_turn(angle_to_rotate)
@@ -228,21 +240,26 @@ class Task(object):
 
     def ungrab_ball(self):
         # if the grabbers are already open, don't do anything
-        if self.world.our_robot.grabbers_open:
-            wait_time = self._communicate.ungrab()
-            time.sleep(wait_time)
-            self.world.our_robot.grabbers_open = True
+        print ("Ungrab ball")
+        #if not self.world.our_robot.grabbers_open:
+        print "Grabbers aren't open, please open them"
+        wait_time = self._communicate.ungrab()
+        time.sleep(wait_time)
+        self.world.our_robot.grabbers_open = True
         return True
 
     def grab_ball(self):
         # if the grabbers are already closed, don't do anything
-        if not self.world.our_robot.grabbers_open:
-            wait_time = self._communicate.grab()
-            time.sleep(wait_time)
-            self.world.our_robot.grabbers_open = False
+        print ("Grab ball")
+        #if self.world.our_robot.grabbers_open:
+        print "Grabbers are open, please close them"
+        wait_time = self._communicate.grab()
+        time.sleep(wait_time)
+        self.world.our_robot.grabbers_open = False
         return True
 
     def kick_ball(self, distance_to_kick=None):
+        print ("Kick ball")
         if distance_to_kick:
             power = self.calculate_kick_power(distance_to_kick)
         else:
@@ -269,7 +286,7 @@ class Task(object):
         # calculate displacement from us to ball
         distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
 
-        if distance < 30:
+        if distance < 32:
             return True
         else:
             return False
@@ -278,7 +295,7 @@ class Task(object):
         # calculate displacement from us to ball
         distance = self._world.teammate.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
 
-        if distance < 30:
+        if distance < 50:
             return True
         else:
             return False
@@ -307,6 +324,8 @@ class Task(object):
         :return: bool
         """
 
+        print ("Safety check. Our robot is at, x, y", self.world.our_robot.x, self.world.our_robot.y)
+
         # we're aiming for these co-ordinates, but realistically we aren't gonna move in a straight line
         # so let's see if there's any robots in our path (but not loop through every possibility, just every +padding
         # certaintly not most efficient way but who cares anymore...
@@ -320,9 +339,10 @@ class Task(object):
             # is this co-ordinate within (z) units of other robots? if so we need to stop and think
             robots = [self.world.teammate, self.world.their_defender, self.world.their_attacker]
             for robot in robots:
-                if (abs(resultant_x - robot.x) <= self.world.safety_padding) and abs(
-                                resultant_y - robot.y) <= self.world.safety_padding:
+                if (abs(resultant_x - robot.x) <= self.world.robot_safety_padding) and abs(
+                                resultant_y - robot.y) <= self.world.robot_safety_padding:
 
+                    print ("TOo close to another robot")
                     # if this robot is moving, don't do anything
                     if robot.speed > 5:
                         return False
@@ -335,10 +355,18 @@ class Task(object):
             check_y += self.world.safety_padding
 
         # check if we're going to run into a wall
-        if (self.world.pitch_boundary_bottom + self.world.safety_padding >= resultant_x) or (
-                        self.world.pitch_boundary_top - self.world.safety_padding <= resultant_x) or (
-                        self.world.pitch_boundary_left - self.world.safety_padding >= resultant_y) or (
-                        self.world.pitch_boundary_right + self.world.safety_padding <= resultant_y):
+        print ("Trying to move to resultant_x, resultant_y", resultant_x, resultant_y)
+        if self.world.pitch_boundary_bottom - self.world.safety_padding <= resultant_y:
+            print("Trying to go somewhere greater than the greatest (bottom) boundary")
+            return False
+        if self.world.pitch_boundary_top + self.world.safety_padding >= resultant_y:
+            print("Trying to go somewhere less than the lowest (top) boundary")
+            return False
+        if self.world.pitch_boundary_left + self.world.safety_padding >= resultant_x:
+            print("Trying to go somewhere less than the left boundary")
+            return False
+        if self.world.pitch_boundary_right - self.world.safety_padding <= resultant_x:
+            print("Trying to go somewhere greater than the right boundary")
             return False
 
         # we're good to move here
@@ -352,6 +380,10 @@ class Task(object):
         """
         # power is between 0.0 and 1.0, assume distance given is between 0.0 and 2.0. this function needs improving
         power = (distance / 2)
+        print ("calculated power is ", power)
+
+        if power > 1:
+            return 1
 
         return power
 
@@ -376,5 +408,5 @@ class Task(object):
         """
 
         # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
-        duration = 100 + (distance * 8.5)
+        duration = 50 + (distance * 8)
         return duration

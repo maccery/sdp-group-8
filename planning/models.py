@@ -14,7 +14,7 @@ class Robot(object):
         self.last_update_time = now()
         self.team_color = None
         self.group_color = None
-        self.grabbers_open = False
+        self.grabbers_open = True
 
     def get_rotation_to_point(self, target_x, target_y):
         """
@@ -120,7 +120,7 @@ class Region(object):
         :param x:
         :param y:
         """
-        if self.left >= x >= self.right:
+        if self.left <= x <= self.right:
             return True
         else:
             return False
@@ -142,7 +142,8 @@ class World(object):
         self._our_goal = Goal(0, 240)
         self._defender_region = Region(0, 0)
         self._attacker_region = Region(0, 0)
-        self._safety_padding = 20
+        self._safety_padding = 10
+        self._robot_safety_padding = 40
         self._pitch_boundary_bottom = 0
         self._pitch_boundary_top = 0
         self._pitch_boundary_right = 0
@@ -159,6 +160,14 @@ class World(object):
     @safety_padding.setter
     def safety_padding(self, value):
         self._safety_padding = value
+
+    @property
+    def robot_safety_padding(self):
+        return self._robot_safety_padding
+
+    @safety_padding.setter
+    def safety_padding(self, value):
+        self._robot_safety_padding = value
 
     @property
     def our_goal(self):
@@ -265,6 +274,9 @@ class World(object):
             # previous position
             new_x = pos_dict['ball']['center'][0]
             new_y = pos_dict['ball']['center'][1]
-            self.ball.update_speed(new_x, new_y)  # this also updates positions
+            if new_x == 0 or new_y == 0:
+                pass
+            else:
+                self.ball.update_speed(new_x, new_y)  # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
             # print(self.ball.x, self.bal
