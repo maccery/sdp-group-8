@@ -133,12 +133,13 @@ class Task(object):
                 return False
         # If the ball IS moving, we need to predict where it's going and move there...
         else:
-            # move to predicted stopping point
-            predicted_x = self.world.ball.predicted_stopping_coordinates_x
-            predicted_y = self.world.ball.predicted_stopping_coordinates_y
+            # move to predicted stopping point, but only when the ball is deceleration
+            if self.world.ball.acceleration[0] < 0:
+                predicted_x = self.world.ball.predicted_stopping_coordinates_x
+                predicted_y = self.world.ball.predicted_stopping_coordinates_y
 
-            if self.rotate_to_alignment(predicted_x, predicted_y):
-                return self.move_to_coordinates(predicted_x, predicted_y)
+                if self.rotate_to_alignment(predicted_x, predicted_y):
+                    return self.move_to_coordinates(predicted_x, predicted_y)
             return False
 
     def task_move_and_grab_ball(self):
