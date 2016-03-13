@@ -145,7 +145,7 @@ class Runner(object):
         """
 
         # Only execute a task if the robot isn't currently in the middle of doing one
-        print ("task is ", self.task)
+        print ("Task: ", self.task)
         task_to_execute = None
         if self.task == 'task_vision':
             task_to_execute = self.world.task.task_vision
@@ -159,13 +159,21 @@ class Runner(object):
             task_to_execute = self.world.task.task_rotate_and_grab
         if self.task == 'task_grab_rotate_kick':
             task_to_execute = self.world.task.task_grab_rotate_kick
+        if self.task == 'task_defender':
+            task_to_execute = self.world.task.task_defender
+        if self.task == 'task_attacker':
+            task_to_execute = self.world.task.task_attacker
+        if self.task == 'task_penalty':
+            task_to_execute = self.world.task.task_penalty
+        if self.task == 'task_goalie':
+            task_to_execute = self.world.task.task_penalty_goalie
 
         # if there's a task to do, let's try it
         if self.task:
             # if it's executed fine, then we've completed the task. otherwise we're going to loop round and try again
             if task_to_execute():
                 self.task = None
-                print("Task completed ")
+                print("Task: COMPLETED")
 
     def save_calibrations(self):
         dump_calibrations(self.vision.calibrations, self.calib_file)

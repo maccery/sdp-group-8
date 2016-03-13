@@ -1,8 +1,9 @@
 import time
+from random import randint
 
 import helper
 from communication.controller import Controller
-from random import randint
+
 
 class Task(object):
     def __init__(self, world):
@@ -32,19 +33,13 @@ class Task(object):
         if self.ball_in_defender_region():
             # if the ball is in the attacker region as well, we need to check who's closer - attacker or us
             if self.ball_in_attacker_region() and not self.are_we_closer_than_teammate():
-                return False
+                self.task_sit_between_goal_and_ball()
 
-            # we're good to go
+            # we're good to go, get ball and kick to teammate
             self.task_grab_rotate_kick()
         # the ball is in just the attacker region, our task is to be half way between the ball and the goal
         else:
-            # work out co-ordinates half way between goal and ball
-            midpoint_x, midpoint_y = helper.calculate_midpoint(self.world.our_goal.x, self.world.our_goal.y,
-                                                               self.world.ball.x, self.world.goal.y)
-
-            if self.move_to_coordinates(midpoint_x, midpoint_y):
-                if self.rotate_to_ball():
-                    self.ungrab_ball()
+            self.task_sit_between_goal_and_ball()
 
         # always return false, this means this task will keep running
         return False
@@ -73,7 +68,7 @@ class Task(object):
         Robot will aim to take a penalty, playing by the penalty rules. Assumes robot is holding ball
         """
         # wait a random amount of time
-        random_number = randint(20,100)
+        random_number = randint(20, 100)
         time.sleep(random_number)
 
         # shoot
@@ -101,34 +96,35 @@ class Task(object):
         # rotate to face the ball
         if self.rotate_to_ball():
             # wait till ball has stopped
-            print('ball speed', self._world.ball.speed)
             if self._world.ball.speed < 5:
-                # move to the ball
-                if self.task_move_to_ball():
-                    if self.ungrab_ball():
+                # move to the ball with grabbers open
+                if self.ungrab_ball():
+                    if self.task_move_to_ball():
                         if self.grab_ball():
                             return self.ball_received()
         return False
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
-        if self.move_to_ball():
-            if self.ball_received():
-                # grab the ball we've just be given
-                if self.grab_ball():
-                    # rotate to face the other robot
-                    if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                        # kick ball to teammate
-                        distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
-                                                                                   self._world.teammate.y)
-                        if self.kick_ball(distance_to_kick=distance):
-                            # check ball reached teammate
-                            return self.ball_received_by_teammate()
+        """
+        Opens grabbers and moves to the ball, grabs it, rotates to teammate, kicks it to teammate.
+        Does not check if ball is received by teammate
+        """
+        if self.ungrab_ball():
+            if self.move_to_ball():
+                if self.ball_received():
+                    # grab the ball we've just be given
+                    if self.grab_ball():
+                        # rotate to face the other robot
+                        if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                            # kick ball to teammate
+                            distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                       self._world.teammate.y)
+                            return self.kick_ball(distance_to_kick=distance)
 
         return False
 
     def task_move_to_ball(self):
-        print("move_to_ball command called")
         # If the ball isn't moving, we can just move to it
         if self._world.ball.speed < 5:
             if self.rotate_to_ball():
@@ -137,9 +133,9 @@ class Task(object):
                 return False
         # If the ball IS moving, we need to predict where it's going and move there...
         else:
-            # calculate where the ball is going
-            predicted_x = self.world.ball.x
-            predicted_y = self.world.ball.y
+            # move to predicted stopping point
+            predicted_x = self.world.ball.predicted_stopping_coordinates_x
+            predicted_y = self.world.ball.predicted_stopping_coordinates_y
 
             if self.rotate_to_alignment(predicted_x, predicted_y):
                 return self.move_to_coordinates(predicted_x, predicted_y)
@@ -148,23 +144,27 @@ class Task(object):
     def task_move_and_grab_ball(self):
         # If we're happy with rotation and movement, grab the ball
         if self.rotate_to_ball():
-            if self.move_to_ball():
-                # self.ungrab_ball()
-                return self.grab_ball()
-            return False
-        # Otherwise return false, and get more data from vision
-        else:
-            return False
+            if self.ungrab_ball():
+                if self.move_to_ball():
+                    return self.grab_ball()
+        return False
 
     def task_kick_ball_in_goal(self):
         # If we're happy with rotation to face goal, ungarb and kick the ball
         if self.rotate_to_alignment(self.world.their_goal.x, self.world.their_goal.y):
             if self.ungrab_ball():
                 return self.kick_ball()
-            return False
-        # Otherwise return false, and get more data from vision
-        else:
-            return False
+        return False
+
+    def task_sit_between_goal_and_ball(self):
+        # work out co-ordinates half way between goal and ball
+        midpoint_x, midpoint_y = helper.calculate_midpoint(self.world.our_goal.x, self.world.our_goal.y,
+                                                           self.world.ball.x, self.world.goal.y)
+
+        if self.move_to_coordinates(midpoint_x, midpoint_y):
+            if self.rotate_to_ball():
+                return self.ungrab_ball()
+        return False
 
     """
     Smaller tasks
@@ -176,26 +176,23 @@ class Task(object):
         already
         :param target_vector
         """
-        print("Move to these co-ordinates: (", x, ",", y, ")")
 
         # Calculate how long we need to run the motor for
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         # are we gonna hit anyone in this time
         if self.safety_check(distance):
-            print("Need to move this distance: ", distance)
 
             if distance < 30:
                 return True
             else:
                 calculated_duration = self.calculate_motor_duration(distance)
-                print ("Running for duration: ", calculated_duration)
 
                 # Tell arduino to move for the duration we've calculated
                 self._communicate.move_duration(calculated_duration)
 
                 # Wait until this task has completed
-                print("We're sleeping for a bit while arudino gets it shit together", calculated_duration)
+
                 time.sleep(calculated_duration / 1000)
                 # Returns false which means we'll get more data from vision first, run this function again, to verify ok
                 return False
@@ -203,7 +200,6 @@ class Task(object):
             return False
 
     def rotate_to_ball(self):
-        print ("rotating ball")
         return self.rotate_to_alignment(self._world.ball.x, self._world.ball.y)
 
     def move_to_ball(self):
@@ -216,22 +212,15 @@ class Task(object):
         :param x:
         :param y:
         """
-        print ("robots coordinates", self._world.our_robot.x, self._world.our_robot.y)
-        print("Rotate to face these co-ordinates: (", x, ",", y, ")")
         angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
-        print("calculated angle is ", angle_to_rotate)
-        print("calculated distance is ", distance)
         # If the angle of rotation is less than 15 degrees, leave it how it is
         if (15 >= angle_to_rotate >= -15 and distance > 40) or (10 >= angle_to_rotate >= -10 and distance <= 40):
-            print("We're happy with the angle, no more rotation")
             return True
         else:
             duration = self.calculate_motor_duration_turn(angle_to_rotate)
-            print("turning for duration ", duration)
             wait_time = self._communicate.turn(duration)
-            print("We're sleeping for a bit while arudino gets it shit together", wait_time)
             time.sleep(abs(wait_time))
             # Returns false which means we'll get more data from vision first, run this function again, to verify ok
             return False
@@ -245,7 +234,6 @@ class Task(object):
         return True
 
     def grab_ball(self):
-        print('grabbing')
         # if the grabbers are already closed, don't do anything
         if not self.world.our_robot.grabbers_open:
             wait_time = self._communicate.grab()
@@ -313,7 +301,8 @@ class Task(object):
 
         Check we aren't gonna run into a wall either
 
-        :param distance_from_us We move in iterations, this specifies the amount of movement we're literally just about to do
+        :param resultant_y:
+        :param resultant_x:
         :return: bool
         """
 

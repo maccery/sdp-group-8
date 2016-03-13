@@ -78,13 +78,21 @@ class Ball(object):
         self.x = x
         self.y = y
         self.speed = speed
+        self.velocity = (0,0)
         self.last_update_time = now()
+        self.predicted_stopping_coordinates_x = x
+        self.predicted_stopping_coordinates_y = y
 
     def update_speed(self, x, y):
         # calculate the speed the ball is moving at, based on the last time we updated the speed and the distnance moved
 
         time_since_last_updated = now() - self.last_update_time
+        initial_velocity = self.velocity
         self.speed = calculate_speed(self.x, self.y, x, y, time_since_last_updated)
+
+        # predict where the ball is going to stop
+        self.velocity = calculate_velocity(self.x, self.y, x, y, time_since_last_updated)
+        self.predicted_stopping_coordinates_x, self.predicted_stopping_coordinates_y = predicted_coordinates(self.x, self.y, x, y, initial_velocity, self.velocity)
 
         # time in seconds
         self.x = x
@@ -130,8 +138,8 @@ class World(object):
         self._task = Task(self)
         self._their_goal = Goal(640, 240)
         self._our_goal = Goal(0, 240)
-        self._defender_region = Region(0, 0, 0, 0)
-        self._attacker_region = Region(0, 0, 0, 0)
+        self._defender_region = Region(0, 0)
+        self._attacker_region = Region(0, 0)
         self._safety_padding = 20
         self._pitch_boundary_bottom = 0
         self._pitch_boundary_top = 0
