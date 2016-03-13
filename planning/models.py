@@ -14,6 +14,7 @@ class Robot(object):
         self.last_update_time = now()
         self.team_color = None
         self.group_color = None
+        self.grabbers_open = False
 
     def get_rotation_to_point(self, target_x, target_y):
         """

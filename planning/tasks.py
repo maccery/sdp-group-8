@@ -2,7 +2,7 @@ import time
 
 import helper
 from communication.controller import Controller
-
+from random import randint
 
 class Task(object):
     def __init__(self, world):
@@ -70,15 +70,25 @@ class Task(object):
 
     def task_penalty(self):
         """
-        Robot will aim to take a penalty, playing by the penalty rules.
+        Robot will aim to take a penalty, playing by the penalty rules. Assumes robot is holding ball
         """
-        pass
+        # wait a random amount of time
+        random_number = randint(20,100)
+        time.sleep(random_number)
+
+        # shoot
+        return self.task_kick_ball_in_goal()
 
     def task_penalty_goalie(self):
         """
-        Robot will be goalie for penality
+        Robot will be goalie for penality. Robot will randomly open grabbers, close them, while facing the ball
         """
-        pass
+        if self.rotate_to_ball():
+            if self.ungrab_ball():
+                time.sleep(20)
+                self.grab_ball()
+
+        return False
 
     """
     Big tasks; these are made up of smaller tasks
@@ -98,14 +108,7 @@ class Task(object):
                     if self.ungrab_ball():
                         if self.grab_ball():
                             return self.ball_received()
-                        return False
-                    return False
-                else:
-                    return False
-            else:
-                return False
-        else:
-            return False
+        return False
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
@@ -121,10 +124,7 @@ class Task(object):
                         if self.kick_ball(distance_to_kick=distance):
                             # check ball reached teammate
                             return self.ball_received_by_teammate()
-                        return False
-                    return False
-                return False
-            return False
+
         return False
 
     def task_move_to_ball(self):
@@ -137,8 +137,12 @@ class Task(object):
                 return False
         # If the ball IS moving, we need to predict where it's going and move there...
         else:
-            if self.rotate_to_ball():
-                return self.move_to_ball()
+            # calculate where the ball is going
+            predicted_x = self.world.ball.x
+            predicted_y = self.world.ball.y
+
+            if self.rotate_to_alignment(predicted_x, predicted_y):
+                return self.move_to_coordinates(predicted_x, predicted_y)
             return False
 
     def task_move_and_grab_ball(self):
@@ -233,14 +237,20 @@ class Task(object):
             return False
 
     def ungrab_ball(self):
-        wait_time = self._communicate.ungrab()
-        time.sleep(wait_time)
+        # if the grabbers are already open, don't do anything
+        if self.world.our_robot.grabbers_open:
+            wait_time = self._communicate.ungrab()
+            time.sleep(wait_time)
+            self.world.our_robot.grabbers_open = True
         return True
 
     def grab_ball(self):
         print('grabbing')
-        wait_time = self._communicate.grab()
-        time.sleep(wait_time)
+        # if the grabbers are already closed, don't do anything
+        if not self.world.our_robot.grabbers_open:
+            wait_time = self._communicate.grab()
+            time.sleep(wait_time)
+            self.world.our_robot.grabbers_open = False
         return True
 
     def kick_ball(self, distance_to_kick=None):
