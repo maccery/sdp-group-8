@@ -53,5 +53,11 @@ class TestBall(unittest.TestCase):
         # we've gone from 2,2 -> 2,2 in 1 second therefore out speed is 0-
         self.assertEqual(world.ball.speed, 0)
 
+    def test_update_velocity(self):
+        world = World(0)
+        # we've gone from 0,0 -> 2,2 in 0 seconds therefore our velocity is (2,2)
+        world.ball.update_speed(2,2)
+        self.assertEqual(world.ball.velocity, (2,2))
+
 if __name__ == '__main__':
     unittest.main()

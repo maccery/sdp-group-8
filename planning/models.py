@@ -79,6 +79,7 @@ class Ball(object):
         self.y = y
         self.speed = speed
         self.velocity = (0,0)
+        self.acceleration = (0,0)
         self.last_update_time = now()
         self.predicted_stopping_coordinates_x = x
         self.predicted_stopping_coordinates_y = y
@@ -92,7 +93,8 @@ class Ball(object):
 
         # predict where the ball is going to stop
         self.velocity = calculate_velocity(self.x, self.y, x, y, time_since_last_updated)
-        self.predicted_stopping_coordinates_x, self.predicted_stopping_coordinates_y = predicted_coordinates(self.x, self.y, x, y, initial_velocity, self.velocity)
+        self.acceleration = calculate_acceleration(initial_velocity, self.velocity, time_since_last_updated)
+        self.predicted_stopping_coordinates_x, self.predicted_stopping_coordinates_y = predicted_coordinates(x, y, initial_velocity, self.acceleration)
 
         # time in seconds
         self.x = x
