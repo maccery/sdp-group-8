@@ -344,11 +344,11 @@ class Task(object):
                     print ("TOo close to another robot")
                     # if this robot is moving, don't do anything
                     if robot.speed > 5:
-                        return False
+                        return resultant_x, resultant_y
                     # robot is unlikely to move, let's re-route
                     else:
                         # this needs to be implemented
-                        return False
+                        return resultant_x, resultant_y
 
             check_x += self.world.safety_padding
             check_y += self.world.safety_padding
