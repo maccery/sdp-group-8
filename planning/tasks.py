@@ -191,8 +191,8 @@ class Task(object):
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         # are we gonna hit anyone in this time
-        if self.safety_check(x, y):
-
+        safety_check = self.safety_check(x, y)
+        if safety_check:
             if distance < 32:
                 return True
             else:
@@ -207,9 +207,8 @@ class Task(object):
                 # Returns false which means we'll get more data from vision first, run this function again, to verify ok
                 return False
         else:
-
-            print ("Safety check failed")
-            return False
+            print ("Safety check failed -> routing to the nearest possible edge")
+            return self.move_to_coordinates(safety_check[0], safety_check[1])
 
     def rotate_to_ball(self):
         print ("Rotate to ball")
@@ -358,16 +357,16 @@ class Task(object):
         print ("Trying to move to resultant_x, resultant_y", resultant_x, resultant_y)
         if self.world.pitch_boundary_bottom - self.world.safety_padding <= resultant_y:
             print("Trying to go somewhere greater than the greatest (bottom) boundary")
-            return False
+            return resultant_x, self.world.pitch_boundary_bottom - self.world.safety_padding
         if self.world.pitch_boundary_top + self.world.safety_padding >= resultant_y:
             print("Trying to go somewhere less than the lowest (top) boundary")
-            return False
+            return resultant_x, self.world.pitch_boundary_top + self.world.safety_padding
         if self.world.pitch_boundary_left + self.world.safety_padding >= resultant_x:
             print("Trying to go somewhere less than the left boundary")
-            return False
+            return self.world.pitch_boundary_left + self.world.safety_padding, resultant_y
         if self.world.pitch_boundary_right - self.world.safety_padding <= resultant_x:
             print("Trying to go somewhere greater than the right boundary")
-            return False
+            return self.world.pitch_boundary_right - self.world.safety_padding, resultant_y
 
         # we're good to move here
         return True
