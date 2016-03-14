@@ -280,3 +280,7 @@ class World(object):
                 self.ball.update_speed(new_x, new_y)  # this also updates positions
             # print(self.our_robot.x, self.our_robot.y, self.our_robot.angle)
             # print(self.ball.x, self.bal
+
+    @robot_safety_padding.setter
+    def robot_safety_padding(self, value):
+        self._robot_safety_padding = value

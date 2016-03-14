@@ -36,8 +36,8 @@ class Runner(object):
         timer = time.clock()
 
         # wait 10 seconds for arduino to connect
-        print("Connecting to Arduino, please wait till confirmation message")
-        time.sleep(4)
+        print("Connecting to Arduino, please wait till confirmation message.")
+        time.sleep(6)
 
         # This asks nicely for goal location, etc
         self.initiate_world()
@@ -79,61 +79,50 @@ class Runner(object):
             pass
             # self.robot.stop()
 
-    def initiate_world(self):
-        print ("Please enter the defender area left most x value")
-        self.world.defender_region.left = 40
-
-        print ("Please enter the defender area right most x value")
-        self.world.defender_region.right = 300
-
-        print ("Please enter the attacker area left most x value")
-        self.world.attacker_region.left = 260
-
-        print ("Please enter the attack area right most x value")
-        self.world.attacker_region.right = 600
-
-        print ("Please enter our goal area x co-ordinate")
-        self.world.our_goal.x = 40
-
-        print ("Please enter our goal area y co-ordinate")
-        self.world.our_goal.y = 245
-
-        print ("Please enter their goal area x co-ordinate")
-        self.world.their_goal.x = 600
-
-        print ("Please enter their goal area y co-ordinate")
-        self.world.their_goal.y = 235
-
-        print ("Please enter the left most x value")
+    def initiate_world(self, left_goal=None, right_goal=None, left_region=None, right_region=None):
         self.world.pitch_boundary_left = 40
-
-        print ("Please enter the right most x value")
         self.world.pitch_boundary_right = 600
+        self.world.pitch_boundary_bottom = 450 # this (confusingly) is actually the TOP as seen by the camera
+        self.world.pitch_boundary_top = 30 # this (confusingly) is actually the BOTTOM as seen by the camera
 
-        print ("Please enter the lowest y co-ordinate")
-        self.world.pitch_boundary_bottom = 450
+        left_goal.x = 40
+        left_goal.y = 245
+        right_goal.x = 600
+        right_goal.y = 235
+        left_region.left = self.world.pitch_boundary_left
+        left_region.right = 300
+        right_region.left = left_region.right
+        right_region.right = self.world.pitch_boundary_right
 
-        print ("Please enter the largest y coordinate")
-        self.world.pitch_boundary_top = 30
+        print ("Which half are we? left or right")
+        our_half = sys.stdin.readline().strip()
+        if our_half == 'left':
+            self.world.our_goal.x = left_goal.x
+            self.world.our_goal.y = left_goal.y
+            self.world.their_goal.x = right_goal.x
+            self.world.their_goal.y = right_goal.y
+            self.world.defender_region.left = left_region.left
+            self.world.defender_region.right = left_region.right
+            self.world.attacker_region.left = right_region.left
+            self.world.attacker_region.right = right_region.right
+        else:
+            self.world.our_goal.x = right_goal.x
+            self.world.our_goal.y = right_goal.y
+            self.world.their_goal.x = left_goal.x
+            self.world.their_goal.y = left_goal.y
+            self.world.defender_region.left = right_region.left
+            self.world.defender_region.right = right_region.right
+            self.world.attacker_region.left = left_region.left
+            self.world.attacker_region.right = left_region.right
 
-        print ("What's our team's colour?")
         self.world.our_robot.team_color = "yellow"
         self.world.teammate.team_color = "blue"
-
-        print ("What's our robot's colour?")
         self.world.our_robot.group_color = "green"
-
-        print ("What's our temmates group's colour?")
         self.world.teammate.group_color = "pink"
-
-        print ("What's our teammates robot's colorotate_to_balloup color?")
         self.world.their_attacker.group_color = "pink"
-
-        print ("What's the other team's defender group color?")
         self.world.their_defender.group_color = "pink"
-
-        print ("How much padding do we want around the robots/walls for safety?")
         self.world.safety_padding = 25
+        self.world.robot_safety_padding = 50
 
     def task_execution(self):
         """
