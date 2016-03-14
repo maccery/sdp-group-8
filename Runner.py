@@ -80,22 +80,31 @@ class Runner(object):
             # self.robot.stop()
 
     def initiate_world(self, left_goal=None, right_goal=None, left_region=None, right_region=None):
+        # These are the only variables that need to be given
         self.world.pitch_boundary_left = 40
         self.world.pitch_boundary_right = 600
         self.world.pitch_boundary_bottom = 450 # this (confusingly) is actually the TOP as seen by the camera
         self.world.pitch_boundary_top = 30 # this (confusingly) is actually the BOTTOM as seen by the camera
+        left_region.right = 300 
+        self.world.our_robot.team_color = self.world.our_robot.team_color = "yellow"
+        self.world.their_attacker.team_color = self.world.their_defender.team_color = "blue"
+        self.world.our_robot.group_color = "green"
+        self.world.teammate.group_color = "pink"
+        self.world.their_attacker.group_color = "pink"
+        self.world.their_defender.group_color = "pink"
 
-        left_goal.x = 40
-        left_goal.y = 245
-        right_goal.x = 600
-        right_goal.y = 235
+        # EVERYTHING ELSE IS CALCULATED on the fly
+        left_goal.x = self.world.pitch_boundary_left
+        left_goal.y = self.world.pitch_boundary_bottom - self.world.pitch_boundary_top / 2
+        right_goal.x = self.world.pitch_boundary_right
+        right_goal.y = left_goal.y
         left_region.left = self.world.pitch_boundary_left
-        left_region.right = 300
         right_region.left = left_region.right
         right_region.right = self.world.pitch_boundary_right
 
         print ("Which half are we? left or right")
         our_half = sys.stdin.readline().strip()
+
         if our_half == 'left':
             self.world.our_goal.x = left_goal.x
             self.world.our_goal.y = left_goal.y
@@ -115,12 +124,6 @@ class Runner(object):
             self.world.attacker_region.left = left_region.left
             self.world.attacker_region.right = left_region.right
 
-        self.world.our_robot.team_color = "yellow"
-        self.world.teammate.team_color = "blue"
-        self.world.our_robot.group_color = "green"
-        self.world.teammate.group_color = "pink"
-        self.world.their_attacker.group_color = "pink"
-        self.world.their_defender.group_color = "pink"
         self.world.safety_padding = 25
         self.world.robot_safety_padding = 50
 
