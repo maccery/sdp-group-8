@@ -157,6 +157,8 @@ class Runner(object):
             task_to_execute = self.world.task.task_grab_rotate_kick
         if self.task == 'task_defender':
             task_to_execute = self.world.task.task_defender
+        if self.task == 'task_defender_kick_off':
+            task_to_execute = self.world.task.task_defender_kick_off
         if self.task == 'task_attacker':
             task_to_execute = self.world.task.task_attacker
         if self.task == 'task_penalty':

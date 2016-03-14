@@ -9,6 +9,7 @@ class Task(object):
     def __init__(self, world):
         self._world = world
         self._communicate = Controller()
+        self._kick_off = False
 
     @property
     def world(self):
@@ -21,6 +22,11 @@ class Task(object):
     """
     Strategies
     """
+    def task_defender_kick_off(self):
+        if self.task_kick_off():
+            return self.task_defender()
+        else:
+            return False
 
     def task_defender(self):
         """
@@ -34,7 +40,7 @@ class Task(object):
             print ("Ball in defender region")
             # if the ball is in the attacker region as well, we need to check who's closer - attacker or us
             if self.ball_in_attacker_region() and not self.are_we_closer_than_teammate():
-                print ("Sit and wait for the ball")
+                print ("Ball is in the attacker region as well, and teammate is closer: sit and wait for the ball")
                 self.task_sit_between_goal_and_ball()
 
             # we're good to go, get ball and kick to teammate
@@ -46,6 +52,24 @@ class Task(object):
 
         # always return false, this means this task will keep running
         return False
+
+    def task_kick_off(self):
+        """
+        Robot will kick the ball to kick off position
+        """
+        # assume we have the ball already in grabber and grabbers close
+        if not self._kick_off:
+            kick_off_x = self.world.defender_region.x + 20
+            kick_off_y = self.world.pitch_boundary_top - 10
+            if self.rotate_to_alignment(kick_off_x, kick_off_y):
+                if self.ungrab_ball():
+                    # kick ball to teammate
+                    distance = self._world.our_robot.get_displacement_to_point(kick_off_x, kick_off_y)
+                    self._kick_off = True
+                    return self.kick_ball(distance_to_kick=distance)
+            return False
+        else:
+            return True
 
     def task_attacker(self):
         """
