@@ -1,4 +1,4 @@
-from planning.models import World, Task
+from planning.models import World, Task, Region, Goal
 from planning.logger import Logger
 from postprocessing import PostProcessing
 from vision.vision import Vision, GUI
@@ -85,7 +85,7 @@ class Runner(object):
         self.world.pitch_boundary_right = 600 # the right most x value of the pitch
         self.world.pitch_boundary_bottom = 450 # this (confusingly) is actually the TOP as seen by the camera
         self.world.pitch_boundary_top = 30 # this (confusingly) is actually the BOTTOM as seen by the camera
-        left_region.right = 300 # the right most x value of the left region (generally the half way x value point)
+        left_region_right = 300 # the right most x value of the left region (generally the half way x value point)
         self.world.our_robot.team_color = self.world.our_robot.team_color = "yellow"
         self.world.their_attacker.team_color = self.world.their_defender.team_color = "blue"
         self.world.our_robot.group_color = "green"
@@ -94,13 +94,10 @@ class Runner(object):
         self.world.their_defender.group_color = "pink"
 
         # EVERYTHING ELSE IS CALCULATED on the fly
-        left_goal.x = self.world.pitch_boundary_left
-        left_goal.y = self.world.pitch_boundary_bottom - self.world.pitch_boundary_top / 2
-        right_goal.x = self.world.pitch_boundary_right
-        right_goal.y = left_goal.y
-        left_region.left = self.world.pitch_boundary_left
-        right_region.left = left_region.right
-        right_region.right = self.world.pitch_boundary_right
+        left_goal = Goal(self.world.pitch_boundary_left, self.world.pitch_boundary_bottom - self.world.pitch_boundary_top / 2)
+        right_goal = Goal(self.world.pitch_boundary_right, left_goal.y)
+        left_region = Region(self.world.pitch_boundary_left, left_region_right)
+        right_region = Region(left_region.right, self.world.pitch_boundary_right)
 
         print ("Which half are we? left or right")
         our_half = sys.stdin.readline().strip()
