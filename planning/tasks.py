@@ -391,14 +391,18 @@ class Task(object):
         # we're good to move here
         return True
 
-    @staticmethod
-    def calculate_kick_power(distance):
+    def calculate_kick_power(self, distance):
         """
         Given a distance to kick, crudely calculates the power for the kicker; this is only used for ball kicking atm
         :param distance:
         """
         # power is between 0.0 and 1.0, assume distance given is between 0.0 and 2.0. this function needs improving
-        power = (distance / 2)
+        # assuming when power = 1, we kick the full length of pitch
+        full_length_of_pitch = self.world.pitch_boundary_right - self.world.pitch_boundary_left
+        # assuming when power = 0.15, that the ball barely moves at all
+        # if 0.15 is distance = 0, and 1 is distance = full length of pitch, then we need a scale that takes that into account
+
+        power = 0.15 + (distance * 0.85 / full_length_of_pitch)
         print ("calculated power is ", power)
 
         if power > 1:
