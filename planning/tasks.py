@@ -22,6 +22,7 @@ class Task(object):
     """
     Strategies
     """
+
     def task_defender_kick_off(self):
         if self.task_kick_off():
             return self.task_defender()
@@ -59,6 +60,7 @@ class Task(object):
         """
         # assume we have the ball already in grabber and grabbers close
         if not self._kick_off:
+            print ("Kicking off the game")
             kick_off_x = self.world.defender_region.x + 20
             kick_off_y = self.world.pitch_boundary_top - 10
             if self.rotate_to_alignment(kick_off_x, kick_off_y):
@@ -99,16 +101,20 @@ class Task(object):
         time.sleep(random_number)
 
         # shoot
-        return self.task_kick_ball_in_goal()
+        if self.ungrab_ball():
+            return self.task_kick_ball_in_goal()
+        return False
 
     def task_penalty_goalie(self):
         """
         Robot will be goalie for penality. Robot will randomly open grabbers, close them, while facing the ball
         """
         if self.rotate_to_ball():
-            if self.ungrab_ball():
-                time.sleep(20)
-                self.grab_ball()
+            # wait till ball is moving
+            if self.world.ball.speed > 8:
+                if self.ungrab_ball():
+                    if self.ball_received():
+                        return self.grab_ball()
 
         return False
 
@@ -121,15 +127,7 @@ class Task(object):
 
     def task_rotate_and_grab(self):
         # rotate to face the ball
-        if self.rotate_to_ball():
-            # wait till ball has stopped
-            if self._world.ball.speed < 5:
-                # move to the ball with grabbers open
-                if self.ungrab_ball():
-                    if self.task_move_to_ball():
-                        if self.grab_ball():
-                            return self.ball_received()
-        return False
+        return self.task_move_and_grab_ball()
 
     # Assuming we're facing the right direction
     def task_grab_rotate_kick(self):
@@ -138,31 +136,29 @@ class Task(object):
         Does not check if ball is received by teammate
         """
         print ("Go grab the ball, kick it to teammate")
-        #if self.ungrab_ball():
-        if self.rotate_to_ball():
-            if self.move_to_ball():
-                if self.ball_received():
-                        # grab the ball we've just be given
-                    if self.grab_ball():
-                            # rotate to face the other robot
-                        if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                            if self.ungrab_ball():
-                                    # kick ball to teammate
-                                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
-                                                                                               self._world.teammate.y)
-                                return self.kick_ball(distance_to_kick=distance)
+        # if self.ungrab_ball():
+        if self.task_move_and_grab_ball():
+            # rotate to face the other robot
+            if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                if self.ungrab_ball():
+                    # kick ball to teammate
+                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                               self._world.teammate.y)
+                    return self.kick_ball(distance_to_kick=distance)
 
         return False
 
     def task_move_to_ball(self):
         # If the ball isn't moving, we can just move to it
         if self._world.ball.speed < 5:
+            print ("Ball isn't moving, just rotate and move to ball")
             if self.rotate_to_ball():
                 return self.move_to_ball()
             else:
                 return False
         # If the ball IS moving, we need to predict where it's going and move there...
         else:
+            print ("Ball is moving, go to predicted co-ordinates")
             # move to predicted stopping point, but only when the ball is deceleration
             if self.world.ball.acceleration[0] < 0:
                 predicted_x = self.world.ball.predicted_stopping_coordinates_x
@@ -174,10 +170,9 @@ class Task(object):
 
     def task_move_and_grab_ball(self):
         # If we're happy with rotation and movement, grab the ball
-        if self.rotate_to_ball():
-            if self.ungrab_ball():
-                if self.move_to_ball():
-                    return self.grab_ball()
+        if self.task_move_to_ball():
+            if self.ball_received():
+                return self.grab_ball()
         return False
 
     def task_kick_ball_in_goal(self):
@@ -193,7 +188,7 @@ class Task(object):
                                                            self.world.ball.x, self.world.ball.y)
 
         print ("our goal x, our goal y, ball x, ball y", self.world.our_goal.x, self.world.our_goal.y,
-                                                         self.world.ball.x, self.world.ball.y)
+               self.world.ball.x, self.world.ball.y)
         if self.rotate_to_alignment(midpoint_x, midpoint_y):
             if self.move_to_coordinates(midpoint_x, midpoint_y):
                 return self.ungrab_ball()
@@ -252,7 +247,8 @@ class Task(object):
         distance = self._world.our_robot.get_displacement_to_point(x, y)
 
         # If the angle of rotation is less than 15 degrees, leave it how it is
-        if (15 >= angle_to_rotate >= -15 and distance > 40) or (5 >= angle_to_rotate >= -5 and distance <= 40) or (25 >= angle_to_rotate >= -25 and distance <= 30):
+        if (15 >= angle_to_rotate >= -15 and distance > 40) or (5 >= angle_to_rotate >= -5 and distance <= 40) or (
+                    25 >= angle_to_rotate >= -25 and distance <= 30):
             return True
         else:
             duration = self.calculate_motor_duration_turn(angle_to_rotate)
@@ -264,7 +260,7 @@ class Task(object):
     def ungrab_ball(self):
         # if the grabbers are already open, don't do anything
         print ("Ungrab ball")
-        #if not self.world.our_robot.grabbers_open:
+        # if not self.world.our_robot.grabbers_open:
         print "Grabbers aren't open, please open them"
         wait_time = self._communicate.ungrab()
         time.sleep(wait_time)
@@ -274,7 +270,7 @@ class Task(object):
     def grab_ball(self):
         # if the grabbers are already closed, don't do anything
         print ("Grab ball")
-        #if self.world.our_robot.grabbers_open:
+        # if self.world.our_robot.grabbers_open:
         print "Grabbers are open, please close them"
         wait_time = self._communicate.grab()
         time.sleep(wait_time)

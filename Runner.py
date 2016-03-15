@@ -81,11 +81,11 @@ class Runner(object):
 
     def initiate_world(self, left_goal=None, right_goal=None, left_region=None, right_region=None):
         # These are the only variables that need to be given
-        self.world.pitch_boundary_left = 40
-        self.world.pitch_boundary_right = 600
+        self.world.pitch_boundary_left = 40 # the left most x value of the pitch
+        self.world.pitch_boundary_right = 600 # the right most x value of the pitch
         self.world.pitch_boundary_bottom = 450 # this (confusingly) is actually the TOP as seen by the camera
         self.world.pitch_boundary_top = 30 # this (confusingly) is actually the BOTTOM as seen by the camera
-        left_region.right = 300 
+        left_region.right = 300 # the right most x value of the left region (generally the half way x value point)
         self.world.our_robot.team_color = self.world.our_robot.team_color = "yellow"
         self.world.their_attacker.team_color = self.world.their_defender.team_color = "blue"
         self.world.our_robot.group_color = "green"
