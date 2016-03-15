@@ -398,11 +398,12 @@ class Task(object):
         """
         # power is between 0.0 and 1.0, assume distance given is between 0.0 and 2.0. this function needs improving
         # assuming when power = 1, we kick the full length of pitch
-        full_length_of_pitch = self.world.pitch_boundary_right - self.world.pitch_boundary_left
+        full_length_of_pitch = self.world.pitch_boundary_right - self.world.pitch_boundary_left # 3m
+        two_metres = 2 * full_length_of_pitch / 3
         # assuming when power = 0.15, that the ball barely moves at all
         # if 0.15 is distance = 0, and 1 is distance = full length of pitch, then we need a scale that takes that into account
 
-        power = 0.15 + (distance * 0.85 / full_length_of_pitch)
+        power = 0.15 + (distance * 0.85 / two_metres)
         print ("calculated power is ", power)
 
         if power > 1:
