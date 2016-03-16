@@ -61,8 +61,13 @@ class Task(object):
         """
         # assume we have the ball already in grabber and grabbers close
         if not self._kick_off:
-            kick_off_x = self.world.defender_region.x + 20
-            kick_off_y = self.world.pitch_boundary_top - 10
+            # This is if we're shooting right to left
+            #kick_off_x = self.world.defender_region.left - 15
+            #kick_off_y = self.world.pitch_boundary_top - 10
+            # this is if we're shooting left to right
+            kick_off_x = self.world.defender_region.right + 15
+            kick_off_y = self.world.pitch_boundary_bottom - 10
+
             if self.rotate_to_alignment(kick_off_x, kick_off_y):
                 if self.ungrab_ball():
                     # kick ball to teammate
@@ -145,17 +150,18 @@ class Task(object):
         print ("Go grab the ball, kick it to teammate")
         #if self.ungrab_ball():
         if self.rotate_to_ball():
-            if self.move_to_ball():
-                if self.ball_received():
-                        # grab the ball we've just be given
-                    if self.grab_ball():
-                            # rotate to face the other robot
-                        if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                            if self.ungrab_ball():
-                                    # kick ball to teammate
-                                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
-                                                                                               self._world.teammate.y)
-                                return self.kick_ball(distance_to_kick=distance)
+            if self.ungrab_ball():
+                if self.move_to_ball():
+                    if self.ball_received():
+                            # grab the ball we've just be given
+                        if self.grab_ball():
+                                # rotate to face the other robot
+                            if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                                if self.ungrab_ball():
+                                        # kick ball to teammate
+                                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                                   self._world.teammate.y)
+                                    return self.kick_ball(distance_to_kick=distance)
 
         return False
 

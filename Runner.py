@@ -81,25 +81,25 @@ class Runner(object):
 
     def initiate_world(self):
         print ("Please enter the defender area left most x value")
-        self.world.defender_region.left = 320
+        self.world.defender_region.left = 40 # 40, 320
 
         print ("Please enter the defender area right most x value")
-        self.world.defender_region.right = 600
+        self.world.defender_region.right = 320 # 320, 600
 
         print ("Please enter the attacker area left most x value")
-        self.world.attacker_region.left = 40
+        self.world.attacker_region.left = 320 # 40, 320
 
         print ("Please enter the attack area right most x value")
-        self.world.attacker_region.right = 320
+        self.world.attacker_region.right = 600 #320, 600
 
         print ("Please enter our goal area x co-ordinate")
-        self.world.our_goal.x = 600
+        self.world.our_goal.x = 40 # 600 or 40
 
         print ("Please enter our goal area y co-ordinate")
         self.world.our_goal.y = 235
 
         print ("Please enter their goal area x co-ordinate")
-        self.world.their_goal.x = 40
+        self.world.their_goal.x = 600 # 40 or 600
 
         print ("Please enter their goal area y co-ordinate")
         self.world.their_goal.y = 245
@@ -132,7 +132,7 @@ class Runner(object):
         self.world.their_attacker.group_color = "pink"
 
         print ("What's the other team's defender group color?")
-        self.world.their_defender.group_color = "pink"
+        self.world.their_defender.group_color = "green"
 
         print ("How much padding do we want around the robots/walls for safety?")
         self.world.safety_padding = 25
