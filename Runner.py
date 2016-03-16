@@ -65,7 +65,7 @@ class Runner(object):
                 self.world.update_positions(data)
 
                 # Only run the task every 20 cycles, this allows us to catch up with vision
-                if counter % 45 == 0:
+                if counter % 28 == 0:
                     self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
