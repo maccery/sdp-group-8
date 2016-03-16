@@ -99,9 +99,12 @@ class Task(object):
         # wait a random amount of time
         random_number = randint(1, 5)
         time.sleep(random_number)
+        x = self.world.their_goal.x
+        y = self.world.their_goal.y - 30
 
-        # shoot
-        return self.task_kick_ball_in_goal()
+        if self.rotate_to_alignment(x, y):
+            return self.task_kick_ball_in_goal()
+        return False
 
     def task_penalty_goalie(self):
         """
