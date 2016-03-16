@@ -65,7 +65,7 @@ class Runner(object):
                 self.world.update_positions(data)
 
                 # Only run the task every 20 cycles, this allows us to catch up with vision
-                if counter % 45 == 0:
+                if counter % 25 == 0:
                     self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
@@ -81,28 +81,28 @@ class Runner(object):
 
     def initiate_world(self):
         print ("Please enter the defender area left most x value")
-        self.world.defender_region.left = 40
+        self.world.defender_region.left = 320
 
         print ("Please enter the defender area right most x value")
-        self.world.defender_region.right = 300
+        self.world.defender_region.right = 600
 
         print ("Please enter the attacker area left most x value")
-        self.world.attacker_region.left = 260
+        self.world.attacker_region.left = 40
 
         print ("Please enter the attack area right most x value")
-        self.world.attacker_region.right = 600
+        self.world.attacker_region.right = 320
 
         print ("Please enter our goal area x co-ordinate")
-        self.world.our_goal.x = 40
+        self.world.our_goal.x = 600
 
         print ("Please enter our goal area y co-ordinate")
-        self.world.our_goal.y = 245
+        self.world.our_goal.y = 235
 
         print ("Please enter their goal area x co-ordinate")
-        self.world.their_goal.x = 600
+        self.world.their_goal.x = 40
 
         print ("Please enter their goal area y co-ordinate")
-        self.world.their_goal.y = 235
+        self.world.their_goal.y = 245
 
         print ("Please enter the left most x value")
         self.world.pitch_boundary_left = 40
@@ -117,8 +117,10 @@ class Runner(object):
         self.world.pitch_boundary_top = 30
 
         print ("What's our team's colour?")
-        self.world.our_robot.team_color = "yellow"
+        self.world.our_robot.team_color = "blue"
         self.world.teammate.team_color = "blue"
+        self.world.their_attacker.team_color = "yellow"
+        self.world.their_defender.team_color = "yellow"
 
         print ("What's our robot's colour?")
         self.world.our_robot.group_color = "green"
