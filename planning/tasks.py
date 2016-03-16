@@ -244,7 +244,10 @@ class Task(object):
         :param y:
         """
         angle_to_rotate = self._world.our_robot.get_rotation_to_point(x, y)
+        
         distance = self._world.our_robot.get_displacement_to_point(x, y)
+
+        print('angle to rotate', angle_to_rotate, distance)
 
         # If the angle of rotation is less than 15 degrees, leave it how it is
         if (15 >= angle_to_rotate >= -15 and distance > 40) or (5 >= angle_to_rotate >= -5 and distance <= 40) or (

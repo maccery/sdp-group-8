@@ -153,11 +153,13 @@ class Vision(object):
             # print("pink green ratio", pgr)
 
             # find the mass centre of the single circle (to find angle)
-            if pgr < 0.5:
-                v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 160, 100, 80, 180, 255, 255
+            if pgr < 0.75:
+                # v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 160, 100, 80, 180, 255, 255
+                v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 156, 91, 188, 186, 191, 255
             else:
                 v1_min, v2_min, v3_min, v1_max, v2_max, v3_max = 50, 100, 100, 90, 255, 255
             tmp_mask = cv2.inRange(contour_frame, (v1_min, v2_min, v3_min), (v1_max, v2_max, v3_max))
+
             m = cv2.moments(tmp_mask, True)
             (tx, ty) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
             # print(tx, ty)
@@ -191,7 +193,7 @@ class Vision(object):
             m = cv2.moments(cnt, False);
             (cx, cy) = int(m['m10'] / (m['m00'] + 0.001)), int(m['m01'] / (m['m00'] + 0.001))
 
-            if pgr < 0.5:
+            if pgr < 0.75:
                 group = 'green'
             else:
                 group = 'pink'
@@ -214,7 +216,9 @@ class Vision(object):
             robot_data.append({'center': (cx, cy), 'angle': angle, 'team': team, 'group': group})
             cv2.drawContours(self.frame,[box],0,(0,0,255),2)
             #cv2.putText(self.frame, "PLATE: b-y ratio %lf p-g ratio %lf" % (byr, pgr), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 1)
-            cv2.putText(self.frame, "PLATE: team %s group %s" % (team, group), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.7, None, 1)
+            #cv2.putText(self.frame, "PLATE: team %s group %s" % (team, group), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.7, None, 1)
+            cv2.putText(self.frame, "PLATE: pink %d green %d" % (pink_no, green_no), (maxx, maxy), cv2.FONT_HERSHEY_SIMPLEX, 0.3, None, 2)
+           
             cnt_index += 1
 
         # print(robot_data)

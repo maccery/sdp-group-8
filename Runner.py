@@ -86,7 +86,7 @@ class Runner(object):
         self.world.pitch_boundary_bottom = 450 # this (confusingly) is actually the TOP as seen by the camera
         self.world.pitch_boundary_top = 30 # this (confusingly) is actually the BOTTOM as seen by the camera
         left_region_right = 300 # the right most x value of the left region (generally the half way x value point)
-        self.world.our_robot.team_color = self.world.our_robot.team_color = "yellow"
+        self.world.our_robot.team_color = self.world.teammate.team_color = "yellow"
         self.world.their_attacker.team_color = self.world.their_defender.team_color = "blue"
         self.world.our_robot.group_color = "green"
         self.world.teammate.group_color = "pink"
