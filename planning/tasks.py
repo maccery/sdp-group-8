@@ -23,7 +23,9 @@ class Task(object):
     Strategies
     """
     def task_defender_kick_off(self):
+        print("Please kick off")
         if self.task_kick_off():
+            print ("kick off completed")
             return self.task_defender()
         else:
             return False
