@@ -197,7 +197,8 @@ class Task(object):
         print ("our goal x, our goal y, ball x, ball y", self.world.our_goal.x, self.world.our_goal.y,
                                                          self.world.ball.x, self.world.ball.y)
         if self.rotate_to_alignment(midpoint_x, midpoint_y):
-            return self.move_to_coordinates(midpoint_x, midpoint_y)
+            if self.move_to_coordinates(midpoint_x, midpoint_y):
+                return self.ungrab_ball()
         return False
 
     """
