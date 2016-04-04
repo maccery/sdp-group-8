@@ -148,6 +148,7 @@ class World(object):
         self._pitch_boundary_top = 0
         self._pitch_boundary_right = 0
         self._pitch_boundary_left = 0
+        self.our_side = "right"
 
     @property
     def ball(self):
