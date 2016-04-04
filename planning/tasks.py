@@ -65,8 +65,12 @@ class Task(object):
             #kick_off_x = self.world.defender_region.left - 15
             #kick_off_y = self.world.pitch_boundary_top - 10
             # this is if we're shooting left to right
-            kick_off_x = self.world.defender_region.right + 15
-            kick_off_y = self.world.pitch_boundary_bottom - 10
+            if self._world.our_side == "right":
+                kick_off_x = self.world.defender_region.right + 15
+                kick_off_y = self.world.pitch_boundary_bottom - 10
+            else:
+                kick_off_x = self.world.defender_region.left - 15
+                kick_off_y = self.world.pitch_boundary_top - 10
 
             if self.rotate_to_alignment(kick_off_x, kick_off_y):
                 if self.ungrab_ball():
@@ -85,17 +89,18 @@ class Task(object):
         If the ball is in the attacking region, it will strive to grab the ball.
         Once it has the ball, it will look to shoot it in the goal.
         """
-        if self.ball_in_attacker_region():
-            # if the ball is in the defender region as well, we need to check who's closer - defender or us
-            if self.ball_in_defender_region() and not self.are_we_closer_than_teammate():
-                return False
-
-            # we're good to go
-            if self.task_move_and_grab_ball():
-                self.task_kick_ball_in_goal()
+        self.task_grab_rotate_kick_in_goal()
 
         # always return false, this means this task will keep running
         return False
+
+    def task_attacker_kick_off(self):
+        print("Please kick off")
+        if self.task_kick_off():
+            print ("kick off completed")
+            return self.task_attacker()
+        else:
+            return False
 
     def task_penalty(self):
         """
@@ -150,18 +155,44 @@ class Task(object):
         print ("Go grab the ball, kick it to teammate")
         #if self.ungrab_ball():
         if self.rotate_to_ball():
-            if self.ungrab_ball():
-                if self.move_to_ball():
-                    if self.ball_received():
-                            # grab the ball we've just be given
-                        if self.grab_ball():
-                                # rotate to face the other robot
-                            if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
-                                if self.ungrab_ball():
-                                        # kick ball to teammate
-                                    distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
-                                                                                                   self._world.teammate.y)
-                                    return self.kick_ball(distance_to_kick=distance)
+            #
+            if self.move_to_ball():
+            #if self.ungrab_ball():
+                if self.ball_received():
+                        # grab the ball we've just be given
+                    if self.grab_ball():
+                            # rotate to face the other robot
+                        if self.rotate_to_alignment(self._world.teammate.x, self._world.teammate.y):
+                            if self.ungrab_ball():
+                                    # kick ball to teammate
+                                distance = self._world.our_robot.get_displacement_to_point(self._world.teammate.x,
+                                                                                               self._world.teammate.y)
+                                return self.kick_ball(distance_to_kick=distance)
+
+        return False
+
+    def task_grab_rotate_kick_in_goal(self):
+        """
+        Opens grabbers and moves to the ball, grabs it, rotates to goal, kicks it to goal.
+        Does not check if ball is received by teammate
+        """
+        print ("Go grab the ball, kick it to goal")
+        #if self.ungrab_ball():
+        if not self.ball_received():
+            print("ball not received, go to ball")
+            if self.rotate_to_ball():
+            #
+                self.move_to_ball()
+
+        else:
+            if self.grab_ball():
+                print ("ball received. kick in goal")
+                    # rotate to face the other robot
+                if self.rotate_to_alignment(self.world.their_goal.x, self.world.their_goal.y):
+                    if self.ungrab_ball():
+                            # kick ball to teammate
+                        distance = self._world.our_robot.get_displacement_to_point(self.world.their_goal.x, self.world.their_goal.y)
+                        return self.kick_ball(distance_to_kick=distance)
 
         return False
 
@@ -228,7 +259,7 @@ class Task(object):
         # are we gonna hit anyone in this time
         safety_check = self.safety_check(x, y)
         if safety_check:
-            if distance < 32:
+            if distance < 40:
                 return True
             else:
                 calculated_duration = self.calculate_motor_duration(distance)
@@ -237,8 +268,8 @@ class Task(object):
                 self._communicate.move_duration(calculated_duration)
 
                 # Wait until this task has completed
-
-                time.sleep(calculated_duration / 1000)
+                if calculated_duration > 0:
+                    time.sleep(calculated_duration / 1000)
                 # Returns false which means we'll get more data from vision first, run this function again, to verify ok
                 return False
         else:
@@ -286,7 +317,6 @@ class Task(object):
         # if the grabbers are already closed, don't do anything
         print ("Grab ball")
         #if self.world.our_robot.grabbers_open:
-        print "Grabbers are open, please close them"
         wait_time = self._communicate.grab()
         time.sleep(wait_time)
         self.world.our_robot.grabbers_open = False
@@ -319,8 +349,8 @@ class Task(object):
     def ball_received(self):
         # calculate displacement from us to ball
         distance = self._world.our_robot.get_displacement_to_point(self._world.ball.x, self._world.ball.y)
-
-        if distance < 32:
+        print (" we are ", distance, " away from ball")
+        if distance < 33:
             return True
         else:
             return False
@@ -427,7 +457,7 @@ class Task(object):
         :param angle_to_rotate: given in degrees
         """
         # crude angle -> duration conversion
-        duration = 100 + (abs(angle_to_rotate) * 5)
+        duration = 100 + (abs(angle_to_rotate) * 5.5)
 
         if angle_to_rotate < 0:
             duration = -duration
@@ -442,5 +472,5 @@ class Task(object):
         """
 
         # some crude distance -> duration measure. assumes 10cm of movement equates to 100ms, past the initial 100ms
-        duration = 50 + (distance * 8)
+        duration = 20 + (distance * 7.5)
         return duration

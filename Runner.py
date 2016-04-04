@@ -65,7 +65,7 @@ class Runner(object):
                 self.world.update_positions(data)
 
                 # Only run the task every 20 cycles, this allows us to catch up with vision
-                if counter % 25 == 0:
+                if counter % 21 == 0:
                     self.task_execution()
 
                 key = cv2.waitKey(4) & 0xFF
@@ -80,62 +80,45 @@ class Runner(object):
             # self.robot.stop()
 
     def initiate_world(self):
-        print ("Please enter the defender area left most x value")
-        self.world.defender_region.left = 40 # 40, 320
 
-        print ("Please enter the defender area right most x value")
-        self.world.defender_region.right = 320 # 320, 600
+        print("Which side are we?")
+        self.world.our_side = sys.stdin.readline().strip()
 
-        print ("Please enter the attacker area left most x value")
-        self.world.attacker_region.left = 320 # 40, 320
+        if self.world.our_side == "left":
+            self.world.defender_region.left = 40 # 40, 320
+            self.world.defender_region.right = 320 # 320, 600
+            self.world.attacker_region.left = 320 # 40, 320
+            self.world.attacker_region.right = 600 #320, 600
+            self.world.our_goal.x = 40 # 600 or 40
+            self.world.our_goal.y = 235
+            self.world.their_goal.x = 600 # 40 or 600
+            self.world.their_goal.y = 245
+        else:
+            self.world.defender_region.left = 320 # 40, 320
+            self.world.defender_region.right = 600 # 320, 600
+            self.world.attacker_region.left = 40 # 40, 320
+            self.world.attacker_region.right = 320 #320, 600
+            self.world.our_goal.x = 600 # 600 or 40
+            self.world.our_goal.y = 235
+            self.world.their_goal.x = 40 # 40 or 600
+            self.world.their_goal.y = 245
 
-        print ("Please enter the attack area right most x value")
-        self.world.attacker_region.right = 600 #320, 600
-
-        print ("Please enter our goal area x co-ordinate")
-        self.world.our_goal.x = 40 # 600 or 40
-
-        print ("Please enter our goal area y co-ordinate")
-        self.world.our_goal.y = 235
-
-        print ("Please enter their goal area x co-ordinate")
-        self.world.their_goal.x = 600 # 40 or 600
-
-        print ("Please enter their goal area y co-ordinate")
-        self.world.their_goal.y = 245
-
-        print ("Please enter the left most x value")
-        self.world.pitch_boundary_left = 40
-
-        print ("Please enter the right most x value")
-        self.world.pitch_boundary_right = 600
-
-        print ("Please enter the lowest y co-ordinate")
-        self.world.pitch_boundary_bottom = 450
-
-        print ("Please enter the largest y coordinate")
-        self.world.pitch_boundary_top = 30
-
-        print ("What's our team's colour?")
         self.world.our_robot.team_color = "blue"
         self.world.teammate.team_color = "blue"
         self.world.their_attacker.team_color = "yellow"
         self.world.their_defender.team_color = "yellow"
-
-        print ("What's our robot's colour?")
         self.world.our_robot.group_color = "green"
-
-        print ("What's our temmates group's colour?")
         self.world.teammate.group_color = "pink"
 
-        print ("What's our teammates robot's colorotate_to_balloup color?")
         self.world.their_attacker.group_color = "pink"
-
-        print ("What's the other team's defender group color?")
         self.world.their_defender.group_color = "green"
 
-        print ("How much padding do we want around the robots/walls for safety?")
+
         self.world.safety_padding = 25
+        self.world.pitch_boundary_left = 40
+        self.world.pitch_boundary_right = 600
+        self.world.pitch_boundary_bottom = 450
+        self.world.pitch_boundary_top = 30
 
     def task_execution(self):
         """
@@ -163,6 +146,8 @@ class Runner(object):
             task_to_execute = self.world.task.task_defender_kick_off
         if self.task == 'task_attacker':
             task_to_execute = self.world.task.task_attacker
+        if self.task == 'task_attacker_kick_off':
+            task_to_execute = self.world.task.task_attacker_kick_off
         if self.task == 'task_penalty':
             task_to_execute = self.world.task.task_penalty
         if self.task == 'task_goalie':
