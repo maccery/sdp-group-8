@@ -35,6 +35,7 @@ ct.move_distance(x=200)
 This will move the robot "forward" by 200 units. **These are arbitrary units** (you can see how these units equate to distance using [this spreadsheet](https://docs.google.com/spreadsheets/d/1Wiwqk3x_8VJf5Og2c1d-C5w0c_pkGMPa_0722nI-RGs/edit). Setting ``x=-100`` would move the robot "backwards" by 100 units. The ``x`` refers to the x-axis, so forward and backwards on 1-dimensional plane. 
 
 **Note: moving left/right (on the y-axis) is not properly implemented yet**
+
 - You can also use ``y`` which turns the robot, for example setting ``y=100`` would turn the robot 100 units clockwise, and setting ``y=-200`` would turn the robot 200 units counter-clockwise.
 
 ## Move forward for given duration
@@ -64,7 +65,7 @@ ct.kick(power)
 
 
 # Engine IDs
-- Left wheel #4
+-  wheel #4
 - Right wheel #5
 - Kicker #3
 - Right grabber #2
@@ -75,21 +76,41 @@ Our system is made up of simply four models: `Ball`, `World`, `Robot` and `Goal`
 
 In `models.py`, the function `update_positions` takes the data from the vision system and saves the locations of the robot.
 
-# Tasks, vision and movement
+
+# Playing football (and smaller tasks)
 These commands take data from the vision system and integrate it with our lower-level Arduino commands, allowing
 the robot to perform actual tasks.
 
-In `models.py` you need to specify the color and team of both our robot and its teammate. This is at the bottom of the file. Once done, simply run:
+In `Runner.py` you need to specify the color and team of both our robot and its teammate. This is done in the ``initiate_world`` function.. You also need to give the
+coordinates of the pitch. THIS CHANGES DEPENDING IF WE ARE LEFT OR RIGHT SIDE OF THE PITCH (as seen by the camera)
 
-In `communinication/controller.py` you must edit the port of the Arduino USB. These are hardcoded but we plan to put them as parameters at some point.
+In `communinication/controller.py` you must edit the port of the Arduino USB. These are hardcoded but we plan to put them as parameters at some point. 
 
-Run the command:
+Once done, simply run the command:
 ```
 python Runner.py
 ```
 
-This will the start the task runner. After it's connected to the Arduino you'll be asked which task you want to execute, simply enter it and press enter (tasks below).
+This will the start the task runner.
+
+After it's connected to the Arduino you'll be asked which task you want to execute, simply enter it and press enter (tasks below).
 Once the task is successfully completed, you can give it another task.
+
+## Play football: defending
+To make our robot act as a defender you simply run `task_defender`. If the ball is in our half, our robot will go to the ball, grab it and pass
+to our teammate. If the ball is in the attacking region, our robot will strive to be half way between the ball and the goal at any given time.
+If the ball is in both the attacking and defending region, if our teammate is closer - it will let the teammate get it, otherwise we will go to get it.
+
+To kick off first, run `task_defender_kick_off`. This will kick the ball into the attacking region for our teammate to get, then continue its regular defender task.
+
+In both cases, this task will never end. It cannot be completed.
+
+## Playing football: penalty
+Assuming the ball is with our robot, with grabbers closed, run `task_penalty` and our robot will shoot the ball at the goal. Once completed, you can give
+it other tasks. It will kick the ball after a random amount of time between 2-10s to "surprise" the teammate.
+
+## Playing football: penalty goalie
+``task_penalty_goalie``. The robot will rotate to look at the ball, open grabbers, then grab them after a specified time.
 
 ## Task: Move to ball
 ``task_move_to_ball`` will gradually move the robot to the ball. It does this through an iterative method; it first
